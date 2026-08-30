@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>炮火之下 · 战火求生</title>
+<style>
+  :root {
+    --bg:#0a0a0c; --panel:#131317; --line:rgba(255,255,255,.07);
+    --text:#e6e0d4; --muted:#8b8478; --accent:#d08a4b;
+    --good:#7cc98a; --warn:#d0b45a; --bad:#d06a5a;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { height:100%; }
+  body {
+    background: radial-gradient(120% 90% at 50% 0%, #181410 0%, transparent 55%),
+                radial-gradient(90% 80% at 50% 110%, #14100c 0%, transparent 60%), var(--bg);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    color:var(--text); display:flex; align-items:center; justify-content:center;
+    height:100vh; overflow:hidden; -webkit-tap-highlight-color:transparent;
+  }
+  #app {
+    width:100%; max-width:640px; background:var(--panel);
+    border:1px solid rgba(208,138,75,.16); border-radius:16px;
+    box-shadow:0 20px 60px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.03);
+    overflow:hidden; position:relative; height:100vh; display:flex; flex-direction:column;
+  }
+
+  #hud { display:none; padding:9px 16px; border-bottom:1px solid var(--line); font-size:12px; }
+  #hud .row1 { display:flex; gap:14px; align-items:center; flex-wrap:wrap; color:var(--muted); }
+  #hud .hp { color:#e0684a; font-weight:700; }
+  #hud .sep { opacity:.3; }
+  #stats { margin-top:8px; display:flex; flex-wrap:wrap; gap:6px; }
+  #stats span { font-size:11px; color:var(--muted); background:rgba(255,255,255,.04); padding:2px 8px; border-radius:12px; }
+  #stats b { color:var(--text); font-weight:600; }
+
+  #screen { padding:16px 18px; overflow-y:auto; flex:1; min-height:0; }
+  #stage { font-size:15px; line-height:1.7; letter-spacing:.01em; white-space:pre-wrap; text-shadow:0 1px 2px rgba(0,0,0,.5); }
+  #stage::after { content:"▌"; color:var(--accent); animation:blink 1s step-end infinite; }
+  #stage.done::after { content:""; }
+  @keyframes blink { 50% { opacity:0; } }
+
+  #choices { margin-top:14px; display:flex; flex-direction:column; gap:8px; }
+  #choices button {
+    text-align:left; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.09);
+    color:var(--text); padding:10px 13px; border-radius:9px; font-size:14px; line-height:1.45;
+    cursor:pointer; transition:all .15s ease; font-family:inherit; width:100%;
+  }
+  #choices button:hover:not(:disabled) { background:rgba(208,138,75,.12); border-color:rgba(208,138,75,.5); transform:translateX(4px); }
+  #choices button:disabled { opacity:.4; cursor:not-allowed; }
+  #choices button .meta { display:block; font-size:12px; margin-top:4px; }
+  #choices button .meta.good { color:var(--good); }
+  #choices button .meta.warn { color:var(--warn); }
+  #choices button .meta.bad { color:var(--bad); }
+  #choices button .meta.muted { color:var(--muted); }
+  #choices button.primary { background:var(--accent); color:#17110c; font-weight:700; text-align:center; border:none; }
+  #choices button.primary:hover { transform:translateY(-1px); box-shadow:0 6px 18px rgba(208,138,75,.3); }
+
+  .overlay {
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; text-align:center; padding:20px 18px 24px;
+    background:rgba(10,10,12,.97); z-index:5; overflow-y:auto;
+  }
+  .overlay::before, .overlay::after { content:""; margin:auto; }
+  .overlay h1 { font-size:32px; letter-spacing:.16em; color:var(--text); margin-bottom:10px; text-shadow:0 0 30px rgba(208,138,75,.4); }
+  .overlay h2 { font-size:20px; letter-spacing:.08em; color:var(--text); margin-bottom:6px; }
+  .overlay .sub { color:var(--muted); font-size:13px; letter-spacing:.04em; line-height:1.8; margin-bottom:18px; }
+  .btn {
+    background:var(--accent); color:#17110c; border:none; padding:13px 34px; border-radius:10px;
+    font-size:16px; font-weight:700; letter-spacing:.1em; cursor:pointer; font-family:inherit;
+    transition:transform .15s ease, box-shadow .15s ease, opacity .15s;
+  }
+  .btn:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 8px 24px rgba(208,138,75,.35); }
+  .btn:disabled { opacity:.4; cursor:not-allowed; }
+  .ending-tag { color:var(--accent); letter-spacing:.3em; font-size:12px; margin-bottom:14px; }
+  .ending-text { color:var(--muted); font-size:14px; line-height:1.9; max-width:420px; margin-bottom:26px; }
+
+  .prof-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; margin-bottom:22px; }
+  .prof-card {
+    background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.09); border-radius:12px;
+    padding:9px 10px; cursor:pointer; text-align:left; transition:all .15s ease;
+  }
+  .prof-card:hover { border-color:rgba(208,138,75,.5); }
+  .prof-card.sel { border-color:var(--accent); background:rgba(208,138,75,.12); }
+  .prof-card .n { font-weight:700; font-size:15px; margin-bottom:3px; }
+  .prof-card .b { color:var(--accent); font-size:12px; margin-bottom:5px; }
+  .prof-card .d { color:var(--muted); font-size:12px; line-height:1.5; }
+
+  .stat-row { display:flex; align-items:center; gap:10px; padding:5px 0; border-bottom:1px solid var(--line); text-align:left; }
+  .stat-row .info { flex:1; }
+  .stat-row .name { font-weight:600; font-size:15px; }
+  .stat-row .name small { color:var(--accent); font-weight:400; font-size:12px; margin-left:6px; }
+  .stat-row .desc { color:var(--muted); font-size:11.5px; margin-top:2px; }
+  .stat-row .ctrl { display:flex; align-items:center; gap:10px; }
+  .stat-row .val { font-size:20px; font-weight:700; width:28px; text-align:center; }
+  .stat-row .ctrl button {
+    width:30px; height:30px; border-radius:8px; border:1px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.04); color:var(--text); font-size:18px; cursor:pointer; line-height:1;
+  }
+  .stat-row .ctrl button:disabled { opacity:.3; cursor:not-allowed; }
+  .pool { color:var(--accent); font-size:14px; margin-bottom:14px; font-weight:600; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hud">
+    <div class="row1">
+      <span>第<b id="day">1</b>天</span><span class="sep">·</span>
+      <span>生命 <b class="hp" id="hp">100</b></span><span class="sep">·</span>
+      <span>食物 <b id="food">3</b></span><span class="sep">·</span>
+      <span>物资 <b id="mat">1</b></span>
+    </div>
+    <div id="stats"></div>
+  </div>
+  <div id="screen">
+    <div id="stage"></div>
+    <div id="choices"></div>
+  </div>
+</div>
+
+<script>
+const STATS = [
+  { key:'stamina',      label:'体力', desc:'奔跑、负重、长途跋涉' },
+  { key:'accuracy',     label:'准度', desc:'射击、搏斗、自卫' },
+  { key:'gathering',    label:'采集', desc:'搜集食物与材料' },
+  { key:'search',       label:'搜索', desc:'翻找废墟、发现隐藏物资' },
+  { key:'recon',        label:'侦查', desc:'察觉危险、规避敌人' },
+  { key:'medicine',     label:'医疗', desc:'处理伤口、救治他人' },
+  { key:'negotiation',  label:'谈判', desc:'交涉、交易、周旋' },
+];
+
+const PROFESSIONS = [
+  { id:'soldier',    name:'退役军人', bonus:{accuracy:2, recon:1}, desc:'你握过枪，见过战场。' },
+  { id:'athlete',    name:'田径运动员', bonus:{stamina:2, recon:1}, desc:'你跑得比子弹更快。' },
+  { id:'doctor',     name:'外科医生', bonus:{medicine:2, negotiation:1}, desc:'你见过比战争更破碎的东西。' },
+  { id:'engineer',   name:'工程师', bonus:{search:2, gathering:1}, desc:'你懂结构，知道东西藏在哪里。' },
+  { id:'scavenger',  name:'拾荒者', bonus:{gathering:2, search:1}, desc:'废墟是你的矿场。' },
+  { id:'journalist', name:'战地记者', bonus:{negotiation:2, recon:1}, desc:'你能让人开口，也能看穿谎言。' },
+];
+
+const BASE = 2, POOL = 8, CAP = 6;
+
+const scenes = {
+  d1: {
+    day:1,
+    text:"炮弹是从上个月开始落的。你住的那栋楼，如今只剩半截立着，像一根折断的手指，指着灰蒙蒙的天。\n\n没有电，没有水，没有食物。肚子已经叫了两天。楼下传来零星的枪声，忽远忽近。\n\n你必须在天黑前，弄到点吃的。",
+    choices:[
+      { label:"去坍塌的超市废墟里搜",
+        check:{stat:'search', diff:3},
+        ok:{ text:"你从瓦砾下扒出几罐没被打烂的罐头，还有两袋米。够撑几天了。", effect:{food:3}, next:"d2" },
+        no:{ text:"横梁突然塌了下来，碎石砸在你背上。你拼死拽出一袋米，几乎爬着回了家。", effect:{hp:-20, food:1}, next:"d2" } },
+      { label:"去城外被炸过的农田里刨",
+        check:{stat:'gathering', diff:2},
+        ok:{ text:"你在冻土里刨出几颗土豆，还有些没坏的菜根。", effect:{food:2}, next:"d2" },
+        no:{ text:"地里能吃的早被刨光了。你挖了半天，只找到半把蔫菜叶，还扭伤了手腕。", effect:{hp:-10, food:1}, next:"d2" } },
+      { label:"今天先不动，保存体力",
+        ok:{ text:"你裹紧毯子，熬过又冷又饿的一天。什么也没吃。", effect:{}, next:"d2" } },
+    ]
+  },
+
+  d2: {
+    day:2,
+    text:"夜里，你听见隔壁传来压抑的呻吟。你想起那屋住着一对老夫妇——男的好像前阵子被弹片打中了腿。\n\n炮声停了，呻吟声更清楚了。",
+    choices:[
+      { label:"过去看看，帮他处理伤口",
+        check:{stat:'medicine', diff:3},
+        ok:{ text:"你用手头仅有的酒精和布条，帮老人清理了伤口。他颤巍巍塞给你两块肥皂和一卷纱布。『拿着，能换东西。』", effect:{materials:1, helped:1}, next:"d3" },
+        no:{ text:"伤口已经烂了。你尽了力，可他的烧越来越高。到后半夜，呻吟停了。你在他家找到半袋面粉，却怎么也高兴不起来。", effect:{hp:-10}, next:"d3" } },
+      { label:"趁没人注意，去他家翻点有用的",
+        check:{stat:'search', diff:2},
+        ok:{ text:"你摸进他家，在柜子最深处翻出些罐头和药品。你告诉自己：他也用不上了。", effect:{materials:2, hardened:1}, next:"d3" },
+        no:{ text:"刚翻到一半，被回来的老太太撞见。她挥舞着扫把，你脸上挂了彩，狼狈逃走，什么也没拿到。", effect:{hp:-15, hardened:1}, next:"d3" } },
+      { label:"装没听见，继续睡",
+        ok:{ text:"你用被子蒙住头。呻吟声像一根细线，整夜缠着你的神经。", effect:{}, next:"d3" } },
+    ]
+  },
+
+  d3: {
+    day:3,
+    text:"听说城东的检查站有士兵在发救济粮，但那里盘查很严。去的人，有的领到了吃的，有的再也没回来。",
+    choices:[
+      { label:"趁夜色偷偷绕过检查站",
+        check:{stat:'recon', diff:3},
+        ok:{ text:"你摸清了换岗的空当，贴着墙根溜了过去，抱回两袋救济粮。", effect:{food:2}, next:"d4" },
+        no:{ text:"探照灯突然扫过来。枪响了。子弹擦着你的肩膀过去，你连滚带爬逃了回来，血染红了半条袖子。", effect:{hp:-30}, next:"d4" } },
+      { label:"用谈吐糊弄过去，假装是登记过的难民",
+        check:{stat:'negotiation', diff:3},
+        ok:{ text:"你镇定地报出一个假名字，编了个滴水不漏的来历。士兵摆摆手，放你进去领了一份粮。", effect:{food:1}, next:"d4" },
+        no:{ text:"你话里的破绽被识破了。士兵骂骂咧咧，抢走你身上值点钱的东西，把你一脚踹开。", effect:{hp:-10, materials:-1}, next:"d4" } },
+      { label:"绕远路，翻过那片废墟过去",
+        check:{stat:'stamina', diff:2},
+        ok:{ text:"你翻墙越沟，累得够呛，但总算平安到了对面，虽然没领到粮。", effect:{}, next:"d4" },
+        no:{ text:"你从一堵断墙上摔下来，扭伤了脚，一瘸一拐地回了家。", effect:{hp:-10}, next:"d4" } },
+    ]
+  },
+
+  d4: {
+    day:4,
+    text:"取水的唯一水井，在一条被狙击手锁死的大街对面。已经有邻居再也没能回来。可水缸已经见底了。",
+    choices:[
+      { label:"观察狙击手的规律，等时机过去",
+        check:{stat:'recon', diff:3},
+        ok:{ text:"你猫在墙后观察了整整一个下午，摸清了那支枪的节奏。天黑透时，你贴着阴影穿过大街，提回了满满一桶水。", effect:{food:2}, next:"d5" },
+        no:{ text:"你以为找到了空当，刚冲到一半，一声闷响，子弹打穿了你脚下的水桶。你连滚带爬缩回墙后，浑身发抖。", effect:{hp:-20}, next:"d5" } },
+      { label:"全力冲刺过去",
+        check:{stat:'stamina', diff:3},
+        ok:{ text:"你数到三，撒腿就跑。风声、枪声、心跳，混在一起。你摔进街对面的掩体里，喘得像要断气，但水到手了。", effect:{food:1}, next:"d5" },
+        no:{ text:"子弹在你身后掀起一串土花。你拼了命地跑，可还是在最后几步被绊倒，膝盖磕得血肉模糊。", effect:{hp:-25}, next:"d5" } },
+      { label:"不冒这个险，接雨水喝",
+        ok:{ text:"你喝下攒了好几天的雨水，一股土腥味。到了后半夜，你开始发冷、发烧。", effect:{hp:-10}, next:"d5" } },
+    ]
+  },
+
+  d5: {
+    day:5,
+    text:"地下的黑市还开着。有人用罐头换药品，用药品换子弹，用子弹换一条命。你攥着仅有的家当，盘算着怎么换。",
+    choices:[
+      { label:"用物资换食物，尽量讨价还价", requires:{materials:1},
+        check:{stat:'negotiation', diff:3},
+        ok:{ text:"你磨破了嘴皮，用最少的物资换到了最多的粮食。", effect:{materials:-1, food:3}, next:"d6" },
+        no:{ text:"对方一眼看穿你的窘迫，狠狠宰了你一刀。", effect:{materials:-1, food:1}, next:"d6" } },
+      { label:"趁乱顺点东西",
+        check:{stat:'search', diff:4},
+        ok:{ text:"你趁着一阵混乱，把两袋货塞进了怀里，头也不回地走了。", effect:{materials:2}, next:"d6" },
+        no:{ text:"你被当场抓住。一顿拳打脚踢后，被扔了出来。", effect:{hp:-20}, next:"d6" } },
+      { label:"什么也不换，扭头就走",
+        ok:{ text:"你攥紧口袋，转身离开。省下来的东西，或许能换到更重要的东西。", effect:{}, next:"d6" } },
+    ]
+  },
+
+  d6: {
+    day:6,
+    text:"防空警报像垂死的野兽，在整座城里嚎叫。炮弹开始落下来了，越来越近。你必须在下一轮炮火前，决定去哪儿躲。",
+    choices:[
+      { label:"躲进楼下的地窖，顺手检查里面",
+        check:{stat:'recon', diff:2},
+        ok:{ text:"地窖的墙比想象中厚。你在角落里摸到一个藏着的木箱，里面有些工具。", effect:{materials:1}, next:"d7" },
+        no:{ text:"地窖年久失修，一块天花板震落下来，砸得你眼冒金星。", effect:{hp:-15}, next:"d7" } },
+      { label:"趁炮火间隙，出去捡空投的物资",
+        check:{stat:'stamina', diff:3},
+        ok:{ text:"你像只兔子一样在炮火里穿梭，抢回了两个物资箱。", effect:{materials:3, food:2}, next:"d7" },
+        no:{ text:"一颗炮弹在近处炸开，气浪把你掀翻在地。你拖着身子爬了回去。", effect:{hp:-30}, next:"d7" } },
+      { label:"躲在家里，哪儿也不去",
+        risk:60,
+        ok:{ text:"你蜷缩在墙角，听炮弹从头顶呼啸而过。这一夜，你运气不错。", effect:{}, next:"d7" },
+        no:{ text:"一枚炮弹落在隔壁，震碎了整扇窗。碎玻璃划得你满脸是血。", effect:{hp:-20}, next:"d7" } },
+    ]
+  },
+
+  d7: {
+    day:7,
+    text:"天快亮时，有人轻轻敲门。门外站着一个年轻女人，怀里抱着个裹得严严实实的婴儿，嘴唇冻得发紫。她说她男人昨天没回来。她想讨一口热的，哪怕只是一口水。",
+    choices:[
+      { label:"把家里最后一点吃的，分给她", requires:{food:2},
+        ok:{ text:"你犹豫了一下，把仅有的吃食塞到她手里。她哭了，不停地道谢，抱着孩子消失进晨雾。你饿得胃里发慌，可心里，忽然不那么空了。", effect:{food:-2, helped:1}, next:"d8" } },
+      { label:"帮她看看孩子的病",
+        check:{stat:'medicine', diff:4},
+        ok:{ text:"你看出孩子是发烧脱了水。你用土办法帮他降温，又喂了温水。孩子终于退了烧。她临走前压低声音告诉你：城西有红十字的撤离点，停火后就走。", effect:{helped:1, intel:true}, next:"d8" },
+        no:{ text:"你尽了力，可孩子太虚弱了。她抱着孩子离开，你一整夜都睡不安稳。", effect:{hp:-10}, next:"d8" } },
+      { label:"关门，这年月谁管得了谁",
+        ok:{ text:"你摇了摇头，关上了门。门外传来压抑的抽泣，然后是渐渐远去的脚步声。", effect:{hardened:1}, next:"d8" } },
+      { label:"开门，但抢走她背着的包",
+        check:{stat:'gathering', diff:2},
+        ok:{ text:"你盯上了她背着的那个旧包。你抢过来，把门砰地关上。你不敢看她的眼睛，也不敢看那个孩子。", effect:{food:2, hardened:1}, next:"d8" },
+        no:{ text:"她拼死护住那个包，指甲在你手上抓出几道血痕。你空着手，狼狈地关上门。", effect:{hp:-10, hardened:1}, next:"d8" } },
+    ]
+  },
+
+  d8: {
+    day:8,
+    text:"第八天，炮声忽然停了。\n\n远处传来久违的、不属于战争的喧哗——是欢呼，是汽车的喇叭，是有人在高喊：『停火了！停火了！』",
+    choices:[ { label:"推开那扇半掩的门，走出去……", ok:{} } ]
+  },
+
+  e_evac:    { ending:"撤离", text:"凭着那晚得来的消息，你找到了城西的撤离点。红十字的卡车一辆接一辆，载着幸存者驶向城外。你登上了其中一辆。\n\n车开动时，你回头看了一眼这座千疮百孔的城。你没有赢下战争，但你把自己，从战争里赢了回来。" },
+  e_watch:   { ending:"守望", text:"停火后，你没有走。你留下来，和那些你帮过的人一起，清理废墟、分发救济、照料伤者。人们渐渐记住了你的脸。\n\n很多年后，城里的孩子会听说，在最难熬的日子里，有一个普通人，守住了这条街。\n\n战争结束了，而人，没有变成废墟。" },
+  e_dawn:    { ending:"黎明", text:"你活到了停火。阳光重新照进你半塌的屋子，照在结痂的伤口上。\n\n你终究没能救下所有人，但你记得，自己曾在一个夜里，向陌生人递出过一碗水。这让你在往后的日子里，还敢相信些什么。" },
+  e_survive: { ending:"幸存", text:"你活下来了。停火那天，你站在窗前，看街上的人欢呼、拥抱。你谁也没有抱。\n\n你把自己照顾得很好，好到有些陌生。活下来这件事，你做到了；可有些东西，在更早之前，就死在了炮火里。" },
+  e_death:   { ending:"长夜", text:"你的故事，停在了这里。\n\n在这个被围困的城里，每天都有人消失，没有人会为你的消失停下脚步。只是，天更冷了一点。" },
+};
+
+const state = { hp:100, food:3, materials:1, day:1, helped:0, hardened:0, intel:false, stats:{} };
+let current=null, typeTimer=null, typing=false, nightNote='';
+
+const stageEl=document.getElementById('stage'), choicesEl=document.getElementById('choices'), hudEl=document.getElementById('hud');
+
+function $(id){ return document.getElementById(id); }
+
+function renderHud(){
+  $('day').textContent=state.day;
+  $('hp').textContent=state.hp;
+  $('food').textContent=state.food;
+  $('mat').textContent=state.materials;
+  const s=$('stats'); s.innerHTML='';
+  STATS.forEach(st=>{ const el=document.createElement('span'); el.innerHTML=st.label+' <b>'+state.stats[st.key]+'</b>'; s.appendChild(el); });
+}
+
+function chanceOf(stat,diff){ const v=state.stats[stat]; return Math.max(5, Math.min(95, 50+(v-diff)*15)); }
+function chanceClass(p){ return p>=70?'good':(p>=40?'warn':'bad'); }
+function meets(req){ if(!req) return true; return Object.entries(req).every(([k,v])=>(state[k]||0)>=v); }
+
+function clearChoices(){ choicesEl.innerHTML=''; }
+
+function buildChoices(node, id){
+  clearChoices();
+  node.choices.forEach(c=>{
+    const btn=document.createElement('button');
+    const okToUse = meets(c.requires);
+    const meta = c.check
+      ? (function(){ const p=chanceOf(c.check.stat, c.check.diff); const st=STATS.find(s=>s.key===c.check.stat); return '<span class="meta '+chanceClass(p)+'">'+st.label+' '+state.stats[c.check.stat]+' · 成功率 '+p+'%</span>'; })()
+      : (c.risk!==undefined ? '<span class="meta '+chanceClass(c.risk)+'">成功率 '+c.risk+'%</span>' : '');
+    let needTxt = '';
+    if(c.requires){ const k=Object.keys(c.requires)[0]; const nm={food:'食物',materials:'物资'}[k]||k; needTxt='<span class="meta muted">（需要 '+nm+' ≥ '+c.requires[k]+'）</span>'; }
+    btn.innerHTML = c.label + (okToUse ? meta : needTxt);
+    btn.disabled = !okToUse;
+    if(id==='d8') btn.onclick = resolveEnding;
+    else if(okToUse) btn.onclick = ()=>resolveChoice(c);
+    choicesEl.appendChild(btn);
+  });
+}
+
+function renderScene(id){
+  current=id; const node=scenes[id];
+  if(node.day) state.day=node.day;
+  renderHud(); clearChoices();
+
+  if(node.ending){ renderEnding(node); return; }
+
+  let text = (id==='d1' ? '' : nightNote) + node.text;
+  nightNote='';
+
+  stageEl.classList.remove('done');
+  typeText(text, ()=> buildChoices(node, id));
+}
+
+function resolveChoice(c){
+  let res, text;
+  if(c.check){
+    const p=chanceOf(c.check.stat, c.check.diff);
+    const roll=Math.random()*100 < p;
+    res = roll ? c.ok : c.no;
+    text = (roll?'「成功」 ':'「失败」 ') + res.text;
+  } else if(c.risk!==undefined){
+    const roll=Math.random()*100 < c.risk;
+    res = roll ? c.ok : c.no;
+    text = (roll?'「顺利」 ':'「不测」 ') + res.text;
+  } else {
+    res = c.ok; text = res.text;
+  }
+  if(res.effect) for(const [k,v] of Object.entries(res.effect)) state[k]+=v;
+  if(state.hp<0) state.hp=0;
+  if(state.materials<0) state.materials=0;
+  if(state.food<0) state.food=0;
+  renderHud();
+
+  // 死亡判定
+  if(state.hp<=0){ showResult(text, ()=>{ renderEnding(scenes.e_death); }); return; }
+
+  const next = res.next || 'd8';
+  showResult(text, ()=>advance(next));
+}
+
+function advance(next){
+  const node=scenes[next];
+  // 夜晚消耗（跨天时）
+  if(node.day && node.day>1){
+    if(state.food>0){ state.food--; nightNote='（这一夜，你吃掉了一份口粮。）\n\n'; }
+    else { state.hp-=20; if(state.hp<0)state.hp=0; nightNote='（这一夜，你饿着肚子。胃里像有火在烧，生命 -20。）\n\n'; if(state.hp<=0){ renderEnding(scenes.e_death); return; } }
+  }
+  renderScene(next);
+}
+
+function showResult(text, onContinue){
+  clearChoices();
+  stageEl.classList.remove('done');
+  typeText(text, ()=>{
+    const btn=document.createElement('button'); btn.className='primary'; btn.textContent='继续';
+    btn.onclick=onContinue; choicesEl.appendChild(btn);
+  });
+}
+
+function resolveEnding(){
+  let id;
+  if(state.hp<=0) id='e_death';
+  else if(state.intel) id='e_evac';
+  else if(state.helped>=2) id='e_watch';
+  else if(state.helped>=1) id='e_dawn';
+  else id='e_survive';
+  renderEnding(scenes[id]);
+}
+
+function renderEnding(node){
+  clearChoices();
+  stageEl.textContent=''; stageEl.classList.add('done');
+  const ov=document.createElement('div'); ov.className='overlay';
+  ov.innerHTML = '<div class="ending-tag">—— '+node.ending+' ——</div>'+
+    '<h1 style="font-size:26px;margin-bottom:20px">'+node.ending+'</h1>'+
+    '<p class="ending-text">'+node.text.replace(/\n/g,'<br>')+'</p>'+
+    '<div style="font-size:13px;color:var(--muted);margin-bottom:18px">你以「'+profile.name+'」的身份，撑过了 '+state.day+' 天</div>'+
+    '<button class="btn" onclick="restart()">再玩一次</button>'+
+    '<button class="btn" style="margin-left:10px;background:transparent;color:var(--accent);border:1px solid var(--accent)" onclick="backToProf()">换职业重来</button>';
+  hudEl.parentNode.appendChild(ov);
+}
+
+let fullText='', typeDone=null;
+function typeText(text, done){
+  clearInterval(typeTimer); typing=true;
+  fullText=text; typeDone=done;
+  stageEl.textContent=''; stageEl.classList.remove('done');
+  let i=0;
+  typeTimer=setInterval(()=>{ i++; stageEl.textContent=text.slice(0,i);
+    if(i>=text.length) finishType();
+  },20);
+}
+function finishType(){
+  clearInterval(typeTimer);
+  if(!typing) return;
+  typing=false;
+  stageEl.textContent=fullText;
+  stageEl.classList.add('done');
+  const d=typeDone; typeDone=null;
+  if(d) d();
+}
+stageEl.addEventListener('click', ()=>{ if(typing) finishType(); });
+
+// —— 角色创建 ——
+let profile=null, alloc={}, pool=POOL;
+
+function showTitle(){
+  hudEl.style.display='none';
+  stageEl.textContent=''; clearChoices();
+  const ov=document.createElement('div'); ov.className='overlay';
+  ov.innerHTML='<h1>炮火之下</h1>'+
+    '<p class="sub">战火中的城市。没有英雄，只有想活下去的普通人。<br>选择你的过去，分配你的能力，撑过这七夜。</p>'+
+    '<button class="btn" onclick="this.parentNode.remove();showProfession()">开始</button>';
+  document.getElementById('app').appendChild(ov);
+}
+
+function showProfession(){
+  clearChoices(); stageEl.textContent='';
+  const ov=document.createElement('div'); ov.className='overlay';
+  ov.innerHTML='<h2>你曾经是……</h2><p class="sub">你的职业，决定你初始的能力加成。</p><div class="prof-grid" id="pg"></div><button class="btn" id="nextP" disabled>下一步：分配能力</button>';
+  document.getElementById('app').appendChild(ov);
+  const pg=$('pg');
+  PROFESSIONS.forEach(p=>{
+    const c=document.createElement('div'); c.className='prof-card';
+    const bstr=Object.entries(p.bonus).map(([k,v])=>STATS.find(s=>s.key===k).label+' +'+v).join(' · ');
+    c.innerHTML='<div class="n">'+p.name+'</div><div class="b">'+bstr+'</div><div class="d">'+p.desc+'</div>';
+    c.onclick=()=>{ profile=p; document.querySelectorAll('.prof-card').forEach(x=>x.classList.remove('sel')); c.classList.add('sel'); $('nextP').disabled=false; };
+    pg.appendChild(c);
+  });
+  $('nextP').onclick=function(){ this.closest('.overlay').remove(); showAlloc(); };
+}
+
+function showAlloc(){
+  clearChoices(); stageEl.textContent='';
+  alloc={}; pool=POOL;
+  const ov=document.createElement('div'); ov.className='overlay';
+  ov.innerHTML='<h2>分配你的能力</h2><div class="pool">剩余点数：<span id="pool">'+POOL+'</span></div><div id="sr"></div><button class="btn" id="go" style="margin-top:18px">开始求生</button>';
+  document.getElementById('app').appendChild(ov);
+  const sr=$('sr');
+  STATS.forEach(st=>{
+    const bonus=profile.bonus[st.key]||0;
+    const row=document.createElement('div'); row.className='stat-row';
+    row.innerHTML='<div class="info"><div class="name">'+st.label+(bonus?'<small>职业 +'+bonus+'</small>':'')+'</div><div class="desc">'+st.desc+'</div></div>'+
+      '<div class="ctrl"><button data-k="'+st.key+'" data-a="-1">−</button><span class="val" id="v-'+st.key+'">'+(BASE+bonus)+'</span><button data-k="'+st.key+'" data-a="1">＋</button></div>';
+    sr.appendChild(row);
+  });
+  function refresh(){
+    $('pool').textContent=pool;
+    STATS.forEach(st=>{
+      const bonus=profile.bonus[st.key]||0, a=alloc[st.key]||0;
+      $('v-'+st.key).textContent=BASE+bonus+a;
+      row0(st.key,'-1').disabled = (alloc[st.key]||0)<=0;
+      row0(st.key,'1').disabled = pool<=0 || (BASE+bonus+(alloc[st.key]||0))>=CAP;
+    });
+  }
+  function row0(k,dir){ return sr.querySelector('button[data-k="'+k+'"][data-a="'+dir+'"]'); }
+  sr.addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    const k=b.dataset.k, dir=+b.dataset.a, bonus=profile.bonus[k]||0;
+    alloc[k]=alloc[k]||0;
+    if(dir>0 && pool>0 && BASE+bonus+alloc[k]<CAP){ alloc[k]++; pool--; }
+    if(dir<0 && alloc[k]>0){ alloc[k]--; pool++; }
+    refresh();
+  });
+  refresh();
+  $('go').onclick=function(){
+    // 应用属性
+    state.hp=100; state.food=3; state.materials=1; state.day=1; state.helped=0; state.hardened=0; state.intel=false;
+    state.stats={};
+    STATS.forEach(st=>{ state.stats[st.key]=BASE+(profile.bonus[st.key]||0)+(alloc[st.key]||0); });
+    this.closest('.overlay').remove();
+    hudEl.style.display='block';
+    nightNote='';
+    renderScene('d1');
+  };
+}
+
+function restart(){ document.querySelectorAll('.overlay').forEach(o=>o.remove()); state.hp=100;state.food=3;state.materials=1;state.day=1;state.helped=0;state.hardened=0;state.intel=false; nightNote=''; renderScene('d1'); }
+function backToProf(){ document.querySelectorAll('.overlay').forEach(o=>o.remove()); showProfession(); }
+
+showTitle();
+</script>
+</body>
+</html>
