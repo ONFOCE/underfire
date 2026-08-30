@@ -423,6 +423,31 @@ function finishType(){
 }
 stageEl.addEventListener('click', ()=>{ if(typing) finishType(); });
 
+// —— 背景故事 ——
+const PROLOGUE = [
+  "这座城市，曾经也有过平静的日子。清晨的集市，傍晚的炊烟，孩子在巷子里追逐，电车叮叮当当地驶过街角。",
+  "战争是什么时候开始的，你已经记不清了。只记得某个深夜，第一声炮响撕破了天空。从那以后，宁静成了奢侈品。",
+  "供水断了，供电停了，货架被搬空，街道上只剩下弹坑和瓦砾。活着的人像老鼠一样躲进地下室，数着炮声，数着日子。",
+  "你只是一个普通人。没有军衔，没有使命，没有人在乎你的死活。你能依靠的，只有自己的双手、过去的经验，和一点点不肯认命的固执。",
+  "活下去。\n\n—— 这是你现在，唯一要做的事。"
+];
+let storyIdx=0;
+function showStory(){
+  hudEl.style.display='none';
+  stageEl.textContent=''; clearChoices();
+  storyIdx=0;
+  playBeat();
+  function playBeat(){
+    stageEl.classList.remove('done');
+    typeText(PROLOGUE[storyIdx], ()=>{
+      const btn=document.createElement('button'); btn.className='primary';
+      btn.textContent = (storyIdx < PROLOGUE.length-1) ? '继续' : '继续 → 选择你的过去';
+      btn.onclick=()=>{ storyIdx++; if(storyIdx<PROLOGUE.length){ clearChoices(); playBeat(); } else { showProfession(); } };
+      choicesEl.appendChild(btn);
+    });
+  }
+}
+
 // —— 角色创建 ——
 let profile=null, alloc={}, pool=POOL;
 
@@ -432,7 +457,7 @@ function showTitle(){
   const ov=document.createElement('div'); ov.className='overlay';
   ov.innerHTML='<h1>炮火之下</h1>'+
     '<p class="sub">战火中的城市。没有英雄，只有想活下去的普通人。<br>选择你的过去，分配你的能力，撑过这七夜。</p>'+
-    '<button class="btn" onclick="this.parentNode.remove();showProfession()">开始</button>';
+    '<button class="btn" onclick="this.parentNode.remove();showStory()">开始</button>';
   document.getElementById('app').appendChild(ov);
 }
 
