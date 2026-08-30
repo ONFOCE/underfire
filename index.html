@@ -108,7 +108,7 @@
       <span>第<b id="day">1</b>天</span><span class="sep">·</span>
       <span>生命 <b class="hp" id="hp">100</b></span><span class="sep">·</span>
       <span>食物 <b id="food">3</b></span><span class="sep">·</span>
-      <span>物资 <b id="mat">1</b></span>
+      <span>物资 <b id="mat">1</b></span><span id="facWrap" style="display:none"><span class="sep">·</span><span id="fac" style="color:var(--accent);font-weight:600"></span></span>
     </div>
     <div id="stats"></div>
   </div>
@@ -137,6 +137,9 @@ const PROFESSIONS = [
   { id:'scavenger',  name:'拾荒者', bonus:{gathering:2, search:1}, desc:'废墟是你的矿场。' },
   { id:'journalist', name:'战地记者', bonus:{negotiation:2, recon:1}, desc:'你能让人开口，也能看穿谎言。' },
 ];
+
+const FACTION_LABEL = { army:'军队', org:'互助会', alone:'独行' };
+const FACTION_BONUS = { army:{accuracy:1, recon:1}, org:{negotiation:1, medicine:1}, alone:{gathering:1, search:1} };
 
 const BASE = 2, POOL = 8, CAP = 6;
 
@@ -268,18 +271,226 @@ const scenes = {
 
   d8: {
     day:8,
-    text:"第八天，炮声忽然停了。\n\n远处传来久违的、不属于战争的喧哗——是欢呼，是汽车的喇叭，是有人在高喊：『停火了！停火了！』",
+    text:"第八天，城里的秩序悄悄变了。\n\n街口的墙上贴出了告示：军队招人，管吃管住，还发饷。围了一堆人，有的跃跃欲试，有的扭头就走。\n\n同一晚，几个老邻居也来找你，说他们正拉一个互助会：一起搜物资、一起守夜、一起熬过去。\n\n也有人在劝你：这年月，命捏在别人手里不踏实。一个人，反倒轻省。",
+    choices:[
+      { label:"参军，去街口的征兵处签下名字",
+        ok:{ text:"你去了征兵处，在花名册上签下了自己的名字。从今晚起，你有了队伍，也有了一口热饭。", effect:{food:2}, faction:'army', next:"d9" } },
+      { label:"加入邻居们的互助会",
+        ok:{ text:"你把手搭在邻居们的手上。从今晚起，这条街的人，彼此照应。", effect:{}, faction:'org', next:"d9" } },
+      { label:"谁都不信，一个人走下去",
+        ok:{ text:"你谁也没应。一个人，也有一个人的活法。", effect:{}, faction:'alone', next:"d9" } },
+    ]
+  },
+
+  d9: {
+    day:9,
+    text:"第九天，天更冷了。风从破损的窗洞里灌进来，像刀子一样割脸。水缸结了冰，柴火也快烧完了。\n\n老人说，这样的冬天，会冻死不少人。",
+    choices:[
+      { label:"去拆附近空屋的门板窗框，当柴烧",
+        check:{stat:'gathering', diff:2},
+        ok:{ text:"你拆回一堆木头，火苗总算旺了起来。", effect:{materials:1}, next:"d10" },
+        no:{ text:"一堵墙突然塌下来，把你埋了半截，你挣扎着爬出来，浑身是伤。", effect:{hp:-15}, next:"d10" } },
+      { label:"用粮食去换些干柴",
+        check:{stat:'negotiation', diff:3},
+        ok:{ text:"你用半袋粮换来一捆干柴，这买卖不亏。", effect:{food:-1, materials:1}, next:"d10" },
+        no:{ text:"对方坐地起价，你气得扭头就走，白白冻了一夜。", effect:{hp:-10}, next:"d10" } },
+      { label:"裹紧所有能裹的，省着体力熬过去",
+        ok:{ text:"你把能穿的都套在身上，蜷在角落里，熬过了这一夜。", effect:{}, next:"d10" } },
+    ]
+  },
+
+  d10: {
+    day:10,
+    text:"第十天，补给彻底断了。最后一点存粮见了底，饥饿让人的眼睛都绿了。连街上的流浪狗，都被人抢着打。",
+    choices:[
+      { label:"跟着人流去城外翻收割过的田",
+        check:{stat:'gathering', diff:3},
+        ok:{ text:"你在冻土里翻出几捧没收干净的谷粒，还有几颗冻蔫的萝卜。", effect:{food:2}, next:"d11" },
+        no:{ text:"地里早被翻了个底朝天。你白跑一趟，还差点被一伙人抢了。", effect:{hp:-15}, next:"d11" } },
+      { label:"拿家当去黑市碰碰运气",
+        check:{stat:'negotiation', diff:3},
+        ok:{ text:"你讨价还价，用最少的家当换回了几顿口粮。", effect:{materials:-1, food:2}, next:"d11" },
+        no:{ text:"黑市上一片混乱，你被人群挤倒，兜里的东西还被顺走了。", effect:{materials:-1}, next:"d11" } },
+      { label:"勒紧裤腰带，硬扛过去",
+        ok:{ text:"你把裤带又勒紧了一格。饥饿像一把钝刀，在胃里慢慢地磨。", effect:{}, next:"d11" } },
+    ]
+  },
+
+  d11: {
+    day:11,
+    text:"第十一天，停了几天的炮火，突然又响了起来，而且更密、更近。整栋楼都在抖，灰从天花板簌簌地往下落。",
+    choices:[
+      { label:"躲进最结实的地下室",
+        check:{stat:'recon', diff:2},
+        ok:{ text:"你早看好了那条最厚的地道。炮火声里，你安然无恙。", effect:{}, next:"d12" },
+        no:{ text:"你慌不择路，被落石砸中了肩膀。", effect:{hp:-20}, next:"d12" } },
+      { label:"顶着炮火，出去捡刚掉落的物资",
+        check:{stat:'stamina', diff:3},
+        ok:{ text:"你在炮弹的间隙里穿梭，抢回两箱还没凉透的物资。", effect:{materials:2, food:1}, next:"d12" },
+        no:{ text:"一颗炮弹在近处炸开，气浪把你掀翻，你连滚带爬缩了回来。", effect:{hp:-30}, next:"d12" } },
+      { label:"趴在屋里最矮的角落，听天由命",
+        risk:55,
+        ok:{ text:"你抱头蜷缩，听着炮声在头顶炸开。这一夜，你运气不错。", effect:{}, next:"d12" },
+        no:{ text:"一枚炮弹落在隔壁，震碎了整面墙，碎砖砸得你满身是血。", effect:{hp:-25}, next:"d12" } },
+    ]
+  },
+
+  d12: {
+    day:12,
+    text:"第十二天，一个消息像野火一样在城里传开：要停火了。\n\n有人说听见了广播，有人说看见谈判的人进了城。可也有人冷笑：狼来了多少次了。",
+    choices:[
+      { label:"多方打听，核实消息的真假",
+        check:{stat:'recon', diff:3},
+        ok:{ text:"你辗转打听到：停火是真的，城西还有红十字的撤离点。", effect:{intel:true}, next:"d13" },
+        no:{ text:"你四处打听，反被人当成探子，差点挨了打。", effect:{hp:-10}, next:"d13" } },
+      { label:"趁人心浮动，去换点硬通货",
+        check:{stat:'negotiation', diff:2},
+        ok:{ text:"有人急着跑路，东西贱卖。你趁机囤了不少。", effect:{materials:2}, next:"d13" },
+        no:{ text:"你想捡漏，反被套路，白搭了家当。", effect:{materials:-1}, next:"d13" } },
+      { label:"不动声色，静观其变",
+        ok:{ text:"你把消息压在心底，不动声色。这年月，信三分就够。", effect:{}, next:"d13" } },
+    ]
+  },
+
+  d13: {
+    day:13,
+    text:"第十三天，夜里格外安静，安静得让人心慌。远处有零星的枪声，又像是谁家放的炮仗。\n\n这一夜，谁也不知道明天会怎样。",
+    choices:[
+      { label:"清点家当，做好最坏的打算",
+        check:{stat:'search', diff:2},
+        ok:{ text:"你翻遍每个角落，把能用的都归置到一起，心里踏实了些。", effect:{materials:1}, next:"d14" },
+        no:{ text:"你翻找时被生锈的铁钉划伤了手。", effect:{hp:-5}, next:"d14" } },
+      { label:"再出去搜最后一趟",
+        check:{stat:'search', diff:3},
+        ok:{ text:"你在夜色里搜了个遍，带回了些吃的和用的。", effect:{food:1, materials:1}, next:"d14" },
+        no:{ text:"你在黑暗中踩空，摔进一个弹坑，扭伤了脚。", effect:{hp:-15}, next:"d14" } },
+      { label:"好好睡一觉，养足精神",
+        ok:{ text:"你早早躺下。这一夜，你睡得比之前任何一晚都安稳。", effect:{}, next:"d14" } },
+    ]
+  },
+
+  d14_army: {
+    day:14,
+    text:"第十四天，你已是队伍里的一员。凌晨，长官把你们叫到一起：停火谈判前，要你们再打最后一仗，守住那道防线。\n\n有人脸色发白，有人把枪攥得死紧。你知道，这一去，不一定回得来。",
+    choices:[
+      { label:"服从命令，跟着队伍冲上去",
+        check:{stat:'accuracy', diff:3},
+        ok:{ text:"你活着回来了，还立了功。可你高兴不起来——你看见太多人没能回来。", effect:{food:2, hardened:1}, next:"d15" },
+        no:{ text:"你被流弹击中，抬下来时血浸透了绷带。", effect:{hp:-30}, next:"d15" } },
+      { label:"临阵脱逃，趁乱溜走",
+        check:{stat:'recon', diff:3},
+        ok:{ text:"你趁夜逃出了营地，躲进废墟，直到枪声停歇。", effect:{hardened:1}, next:"d15" },
+        no:{ text:"你被巡逻队抓住，当成逃兵，一顿毒打。", effect:{hp:-25}, next:"d15" } },
+      { label:"装病，留在后方",
+        risk:60,
+        ok:{ text:"你装作旧伤复发，躲过了这一仗。", effect:{}, next:"d15" },
+        no:{ text:"军医识破了你的把戏，罚你去挖了一夜的掩体。", effect:{hp:-15}, next:"d15" } },
+    ]
+  },
+
+  d14_org: {
+    day:14,
+    text:"第十四天，互助会遇到了最大的危机。一伙溃兵和地痞盯上了你们囤的粮食，天黑后围了上来，叫嚣着要你们开门。\n\n大家把门顶死，面面相觑，谁也不敢出声。",
+    choices:[
+      { label:"组织大家死守，谁来都不开门",
+        check:{stat:'negotiation', diff:3},
+        ok:{ text:"你说服了所有人，大家抄起家伙顶住门。那帮人见讨不到便宜，骂骂咧咧地散了。", effect:{helped:1}, next:"d15" },
+        no:{ text:"人心散了，有人慌了手脚，门差点被撞开。", effect:{hp:-20}, next:"d15" } },
+      { label:"带着大家从后墙撤离，粮食能带多少带多少",
+        check:{stat:'stamina', diff:3},
+        ok:{ text:"你领着大家翻过院墙，转移到一处隐蔽的地窖，人和粮食都保住了。", effect:{helped:1}, next:"d15" },
+        no:{ text:"撤离时有人摔倒，引来注意。乱作一团，粮食丢了大半。", effect:{food:-1, hp:-20}, next:"d15" } },
+      { label:"把粮食分出去一半，息事宁人",
+        requires:{food:2},
+        ok:{ text:"你把半数的存粮从门缝里递了出去。那帮人分了粮，竟真的散了。", effect:{food:-2, helped:1}, next:"d15" } },
+    ]
+  },
+
+  d14_alone: {
+    day:14,
+    text:"第十四天，你依旧一个人。夜里，有人撬你的门——不是士兵，也不是地痞，只是几个饿极了的、和你一样的普通人。\n\n他们的眼睛在黑暗里发亮，像狼。",
+    choices:[
+      { label:"抄起家伙，跟他们拼了",
+        check:{stat:'accuracy', diff:3},
+        ok:{ text:"你拼死一搏，把他们赶走了。你守住了自己的窝，也失去了最后一点对同类的善意。", effect:{materials:1, hardened:1}, next:"d15" },
+        no:{ text:"寡不敌众，你被按在地上。他们抢了东西，四散而去。", effect:{hp:-25}, next:"d15" } },
+      { label:"把仅剩的食物分他们一点，求个平安",
+        check:{stat:'negotiation', diff:3},
+        ok:{ text:"你递出一些吃的，说大家都不容易。他们愣住，拿走食物，真的走了。", effect:{food:-1, helped:1}, next:"d15" },
+        no:{ text:"他们嫌少，动了手。你护着剩下的口粮，挨了几下。", effect:{hp:-20}, next:"d15" } },
+      { label:"从后窗翻出去，弃了这地方",
+        check:{stat:'stamina', diff:2},
+        ok:{ text:"你抓上要紧的东西，从后窗翻了出去，消失在夜色里。", effect:{}, next:"d15" },
+        no:{ text:"你翻窗时崴了脚，疼得直冒冷汗，却不敢停下。", effect:{hp:-15}, next:"d15" } },
+    ]
+  },
+
+  d15: {
+    day:15,
+    text:"第十五天，炮声终于停了。\n\n是彻彻底底地停了。窗外传来久违的喧哗——欢呼、汽车喇叭，还有人在高喊：『停火了！停火了！』\n\n战争，结束了。",
     choices:[ { label:"推开那扇半掩的门，走出去……", ok:{} } ]
   },
 
-  e_evac:    { ending:"撤离", text:"凭着那晚得来的消息，你找到了城西的撤离点。红十字的卡车一辆接一辆，载着幸存者驶向城外。你登上了其中一辆。\n\n车开动时，你回头看了一眼这座千疮百孔的城。你没有赢下战争，但你把自己，从战争里赢了回来。" },
-  e_watch:   { ending:"守望", text:"停火后，你没有走。你留下来，和那些你帮过的人一起，清理废墟、分发救济、照料伤者。人们渐渐记住了你的脸。\n\n很多年后，城里的孩子会听说，在最难熬的日子里，有一个普通人，守住了这条街。\n\n战争结束了，而人，没有变成废墟。" },
-  e_dawn:    { ending:"黎明", text:"你活到了停火。阳光重新照进你半塌的屋子，照在结痂的伤口上。\n\n你终究没能救下所有人，但你记得，自己曾在一个夜里，向陌生人递出过一碗水。这让你在往后的日子里，还敢相信些什么。" },
-  e_survive: { ending:"幸存", text:"你活下来了。停火那天，你站在窗前，看街上的人欢呼、拥抱。你谁也没有抱。\n\n你把自己照顾得很好，好到有些陌生。活下来这件事，你做到了；可有些东西，在更早之前，就死在了炮火里。" },
+  e_evac:    { ending:"撤离", text:"凭着打探来的消息，你找到了城西的撤离点。红十字的卡车一辆接一辆，载着幸存者驶向城外。你登上了其中一辆。\n\n车开动时，你回头看了一眼这座千疮百孔的城。你没有赢下战争，但你把自己，从战争里赢了回来。" },
+  e_army:    { ending:"解甲", text:"停火后，军队开始遣散。你领了一笔微薄的遣散费，脱下了那身借来的军装。\n\n你算不上英雄，也沾过不该沾的血。可至少，你没有死在这座城里。\n\n你把钱攥在手里，不知道该哭，还是该笑。" },
+  e_org:     { ending:"守望", text:"停火后，你没有走。你留下来，和那些你帮过的人一起，清理废墟、分发救济、照料伤者。人们渐渐记住了你的脸。\n\n很多年后，城里的孩子会听说，在最难熬的日子里，有一个普通人，守住了这条街。\n\n战争结束了，而人，没有变成废墟。" },
+  e_alone:   { ending:"幸存", text:"你活下来了。停火那天，你站在窗前，看街上的人欢呼、拥抱。你谁也没有抱。\n\n你把自己照顾得很好，好到有些陌生。活下来这件事，你做到了；可有些东西，在更早之前，就死在了炮火里。" },
   e_death:   { ending:"长夜", text:"你的故事，停在了这里。\n\n在这个被围困的城里，每天都有人消失，没有人会为你的消失停下脚步。只是，天更冷了一点。" },
 };
 
-const state = { hp:100, food:3, materials:1, day:1, helped:0, hardened:0, intel:false, stats:{} };
+const RANDOM_EVENTS = [
+  { id:'r_snow', text:"夜里，一场暴风雪突然袭来。窗户被风吹得砰砰响，寒气从每一条缝隙往里钻。",
+    choices:[
+      { label:"多烧些柴，守着火别睡死", check:{stat:'gathering', diff:2}, ok:{ text:"你守着火，熬过了这一夜。", effect:{} }, no:{ text:"柴火不够，你冻得直哆嗦，天亮时头疼欲裂。", effect:{hp:-10} } },
+      { label:"裹紧毯子硬扛", risk:50, ok:{ text:"你裹紧毯子，挺了过去。", effect:{} }, no:{ text:"这一夜把你冻坏了，浑身发冷。", effect:{hp:-15} } },
+    ] },
+  { id:'r_wound', text:"天快亮时，你在巷口发现一个倒在血泊里的陌生人。他还活着，嘴唇翕动着，像在求救。",
+    choices:[
+      { label:"停下，尽力救他", check:{stat:'medicine', diff:3}, ok:{ text:"你帮他止了血。他醒来后，颤巍巍道谢，塞给你一点东西。", effect:{helped:1, materials:1} }, no:{ text:"你尽了力，可他伤势太重，没撑过去。", effect:{hp:-10} } },
+      { label:"搜他身上有没有值钱的东西", check:{stat:'search', diff:2}, ok:{ text:"你从他身上翻出些有用的东西，头也不回地走了。", effect:{materials:1, hardened:1} }, no:{ text:"你什么也没找到，反而沾了一手的血。", effect:{} } },
+      { label:"当没看见，绕开走", ok:{ text:"你低下头，快步走了过去。", effect:{hardened:1} } },
+    ] },
+  { id:'r_drop', text:"远处传来飞机的轰鸣，紧接着几个降落伞晃晃悠悠地飘下来，落在废墟之间。是空投！",
+    choices:[
+      { label:"趁早冲过去抢", check:{stat:'stamina', diff:3}, ok:{ text:"你第一个冲到，抢回了满满一箱。", effect:{materials:2, food:1} }, no:{ text:"你被人群挤倒，空手而归。", effect:{hp:-20} } },
+      { label:"等人都抢完再去捡漏", check:{stat:'search', diff:2}, ok:{ text:"你在边角里翻出些被踩烂但还能用的东西。", effect:{materials:1} }, no:{ text:"等你过去，连渣都没剩下。", effect:{} } },
+      { label:"太危险，不去", ok:{ text:"你看着那帮人抢成一团，转身回了家。", effect:{} } },
+    ] },
+  { id:'r_looter', text:"夜里，你撞见几个蒙着脸的人，正撬隔壁家的门。他们回头看见了你。",
+    choices:[
+      { label:"抄家伙，跟他们干", check:{stat:'accuracy', diff:3}, ok:{ text:"你气势汹汹地扑上去，把他们吓跑了。", effect:{materials:1} }, no:{ text:"你被他们围住，挨了一顿打。", effect:{hp:-25} } },
+      { label:"悄悄退走，别惹事", check:{stat:'recon', diff:2}, ok:{ text:"你屏住呼吸，退进阴影里，没被发现。", effect:{} }, no:{ text:"你踩断了一根木棍，被他们追着跑了几条街。", effect:{hp:-15} } },
+    ] },
+  { id:'r_checkpoint', text:"路口突然多了道盘查。几个士兵端着枪，挨个查路人的证件和背包。",
+    choices:[
+      { label:"老实配合，编个说法", check:{stat:'negotiation', diff:3}, ok:{ text:"你编了个滴水不漏的来历，士兵挥手放你过去。", effect:{} }, no:{ text:"你的谎话被识破，背包被翻了个底朝天。", effect:{materials:-1} } },
+      { label:"绕小路过去", check:{stat:'recon', diff:2}, ok:{ text:"你贴着墙根，从一条小巷绕了过去。", effect:{} }, no:{ text:"你绕路时被碎石绊倒，摔得不轻。", effect:{hp:-10} } },
+    ] },
+  { id:'r_dog', text:"你在废墟里发现一群野狗正刨着什么，可能是它们藏起来的食物。",
+    choices:[
+      { label:"赶走野狗，抢它们的食物", check:{stat:'gathering', diff:3}, ok:{ text:"你挥舞着棍子，把野狗赶跑，挖出几块没坏的食物。", effect:{food:1} }, no:{ text:"野狗呲着牙扑了上来，你被咬伤了腿。", effect:{hp:-15} } },
+      { label:"算了，别跟畜生争", ok:{ text:"你远远地绕开了。这年月，狗也不容易。", effect:{} } },
+    ] },
+  { id:'r_army_escape', faction:'army', text:"队伍里，一个老兵悄悄问你：要不要趁夜里一起开小差，回家看看家人。",
+    choices:[
+      { label:"跟他走", check:{stat:'recon', diff:3}, ok:{ text:"你们趁夜溜了出去。天亮前，他又折返了——他说，他不放心家人，更不敢当逃兵。", effect:{hardened:1} }, no:{ text:"你们刚摸出营地就被发现，抓回去关了禁闭。", effect:{hp:-20} } },
+      { label:"劝他别犯傻", check:{stat:'negotiation', diff:2}, ok:{ text:"你劝住了他。这当口当逃兵，是要挨枪子的。", effect:{} }, no:{ text:"他听不进去，第二天再没人见过他。", effect:{} } },
+    ] },
+  { id:'r_org_ration', faction:'org', text:"互助会里吵翻了天：有人提议粮食集中起来统一分配，有人坚持各管各的。",
+    choices:[
+      { label:"支持统一分配", check:{stat:'negotiation', diff:3}, ok:{ text:"你据理力争，最终说服了大家。粮食集中起来，谁也不会饿死。", effect:{helped:1} }, no:{ text:"你吵不过那帮人，方案没通过。", effect:{} } },
+      { label:"支持各管各的", ok:{ text:"你不想把自己的口粮交给别人管。这年月，谁信得过谁。", effect:{hardened:1} } },
+    ] },
+];
+
+const EPILOGUES = {
+  evac:"撤离之后，你被安置在城外的一处临时营地。帐篷里挤满了和你一样的人。\n\n你看着远处那座城市的轮廓，慢慢学着在和平里呼吸。战争教会你的最后一课是：活着，比什么都重要。",
+  army:"战争结束后，你被遣散。你把军装叠好，塞进柜子最深处，回到空荡荡的家里。\n\n后来你找了份看仓库的活，日子平淡得发闷。偶尔夜里还会惊醒，摸向床头那支并不存在的枪。\n\n但你终究，熬到了和平。",
+  org:"战争结束后，互助会没有散。你们把废墟一点一点清出来，修好了水井，种上了菜。\n\n有人走了，也有人留下来。你成了这条街上人人都会点头招呼的人。\n\n和平来得迟，但它终于来了。",
+  alone:"战争结束后，你依旧是一个人。你搬进了一间能看见日出的屋子，慢慢习惯了不用数着炮声入睡的日子。\n\n偶尔有邻居敲你的门。你犹豫很久，才把门打开一条缝。\n\n你在学着，重新相信别人。",
+};
+
+const state = { hp:100, food:3, materials:1, day:1, helped:0, hardened:0, intel:false, faction:null, ending:null, stats:{} };
 let current=null, typeTimer=null, typing=false, nightNote='';
 
 const stageEl=document.getElementById('stage'), choicesEl=document.getElementById('choices'), hudEl=document.getElementById('hud');
@@ -291,6 +502,8 @@ function renderHud(){
   $('hp').textContent=state.hp;
   $('food').textContent=state.food;
   $('mat').textContent=state.materials;
+  const fac=state.faction, fw=$('facWrap');
+  if(fac){ fw.style.display=''; $('fac').textContent=FACTION_LABEL[fac]; } else { fw.style.display='none'; }
   const s=$('stats'); s.innerHTML='';
   STATS.forEach(st=>{ const el=document.createElement('span'); el.innerHTML=st.label+' <b>'+state.stats[st.key]+'</b>'; s.appendChild(el); });
 }
@@ -313,13 +526,14 @@ function buildChoices(node, id){
     if(c.requires){ const k=Object.keys(c.requires)[0]; const nm={food:'食物',materials:'物资'}[k]||k; needTxt='<span class="meta muted">（需要 '+nm+' ≥ '+c.requires[k]+'）</span>'; }
     btn.innerHTML = c.label + (okToUse ? meta : needTxt);
     btn.disabled = !okToUse;
-    if(id==='d8') btn.onclick = resolveEnding;
+    if(id==='d15') btn.onclick = resolveEnding;
     else if(okToUse) btn.onclick = ()=>resolveChoice(c);
     choicesEl.appendChild(btn);
   });
 }
 
 function renderScene(id){
+  if(id==='d14') id = 'd14_' + (state.faction||'alone');
   current=id; const node=scenes[id];
   if(node.day) state.day=node.day;
   renderHud(); clearChoices();
@@ -348,24 +562,32 @@ function resolveChoice(c){
     res = c.ok; text = res.text;
   }
   if(res.effect) for(const [k,v] of Object.entries(res.effect)) state[k]+=v;
+  if(res.faction){ state.faction=res.faction; const fb=FACTION_BONUS[res.faction]; if(fb) for(const [k,v] of Object.entries(fb)) state.stats[k]=(state.stats[k]||0)+v; }
   if(state.hp<0) state.hp=0;
+  if(state.hp>100) state.hp=100;
   if(state.materials<0) state.materials=0;
   if(state.food<0) state.food=0;
   renderHud();
 
   // 死亡判定
-  if(state.hp<=0){ showResult(text, ()=>{ renderEnding(scenes.e_death); }); return; }
+  if(state.hp<=0){ state.ending='e_death'; showResult(text, ()=>{ renderEnding(scenes.e_death); }); return; }
 
-  const next = res.next || 'd8';
+  const next = res.next || 'd15';
   showResult(text, ()=>advance(next));
 }
 
 function advance(next){
+  if(next==='d14') next='d14_'+(state.faction||'alone');
   const node=scenes[next];
   // 夜晚消耗（跨天时）
   if(node.day && node.day>1){
     if(state.food>0){ state.food--; nightNote='（这一夜，你吃掉了一份口粮。）\n\n'; }
-    else { state.hp-=20; if(state.hp<0)state.hp=0; nightNote='（这一夜，你饿着肚子。胃里像有火在烧，生命 -20。）\n\n'; if(state.hp<=0){ renderEnding(scenes.e_death); return; } }
+    else { state.hp-=20; if(state.hp<0)state.hp=0; nightNote='（这一夜，你饿着肚子。胃里像有火在烧，生命 -20。）\n\n'; if(state.hp<=0){ state.ending='e_death'; renderEnding(scenes.e_death); return; } }
+  }
+  // 随机事件
+  if(node.day && node.day>=2 && node.day<=14 && Math.random()<0.35){
+    const ev=pickEvent();
+    if(ev) return renderEvent(ev, next);
   }
   renderScene(next);
 }
@@ -383,9 +605,10 @@ function resolveEnding(){
   let id;
   if(state.hp<=0) id='e_death';
   else if(state.intel) id='e_evac';
-  else if(state.helped>=2) id='e_watch';
-  else if(state.helped>=1) id='e_dawn';
-  else id='e_survive';
+  else if(state.faction==='army') id='e_army';
+  else if(state.faction==='org') id='e_org';
+  else id='e_alone';
+  state.ending=id;
   renderEnding(scenes[id]);
 }
 
@@ -397,9 +620,37 @@ function renderEnding(node){
     '<h1 style="font-size:26px;margin-bottom:20px">'+node.ending+'</h1>'+
     '<p class="ending-text">'+node.text.replace(/\n/g,'<br>')+'</p>'+
     '<div style="font-size:13px;color:var(--muted);margin-bottom:18px">你以「'+profile.name+'」的身份，撑过了 '+state.day+' 天</div>'+
-    '<button class="btn" onclick="restart()">再玩一次</button>'+
-    '<button class="btn" style="margin-left:10px;background:transparent;color:var(--accent);border:1px solid var(--accent)" onclick="backToProf()">换职业重来</button>';
+    (state.ending && state.ending!=='e_death' ? '<div><button class="btn" onclick="showEpilogue()">看一看日后谈</button></div>' : '')+
+    '<div style="margin-top:14px"><button class="btn" onclick="restart()">再玩一次</button>'+
+    '<button class="btn" style="margin-left:10px;background:transparent;color:var(--accent);border:1px solid var(--accent)" onclick="backToProf()">换职业重来</button></div>';
   hudEl.parentNode.appendChild(ov);
+}
+
+function pickEvent(){
+  const pool = RANDOM_EVENTS.filter(e=>!e.faction || e.faction===state.faction);
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+function renderEvent(ev, back){
+  const node = { choices: ev.choices.map(c=>{
+      const cc=JSON.parse(JSON.stringify(c));
+      if(cc.ok && cc.ok.next===undefined) cc.ok.next=back;
+      if(cc.no && cc.no.next===undefined) cc.no.next=back;
+      return cc;
+    }) };
+  stageEl.classList.remove('done');
+  const text = nightNote + ev.text; nightNote='';
+  typeText(text, ()=> buildChoices(node, 'r'));
+}
+function showEpilogue(){
+  const key = (state.ending==='e_evac') ? 'evac' : (state.faction||'alone');
+  const text = EPILOGUES[key] || EPILOGUES.alone;
+  const ov=document.createElement('div'); ov.className='overlay';
+  ov.innerHTML = '<div class="ending-tag">—— 日后谈 ——</div>'+
+    '<h1 style="font-size:22px;margin-bottom:20px">战争之后</h1>'+
+    '<p class="ending-text">'+text.replace(/\n/g,'<br>')+'</p>'+
+    '<div><button class="btn" onclick="this.closest(\'.overlay\').remove()">返回结局</button></div>'+
+    '<div style="margin-top:14px"><button class="btn" onclick="restart()">再玩一次</button></div>';
+  document.getElementById('app').appendChild(ov);
 }
 
 let fullText='', typeDone=null;
@@ -456,7 +707,7 @@ function showTitle(){
   stageEl.textContent=''; clearChoices();
   const ov=document.createElement('div'); ov.className='overlay';
   ov.innerHTML='<h1>炮火之下</h1>'+
-    '<p class="sub">战火中的城市。没有英雄，只有想活下去的普通人。<br>选择你的过去，分配你的能力，撑过这七夜。</p>'+
+    '<p class="sub">战火中的城市。没有英雄，只有想活下去的普通人。<br>选择你的过去，分配你的能力，撑过这十五天。</p>'+
     '<button class="btn" onclick="this.parentNode.remove();showStory()">开始</button>';
   document.getElementById('app').appendChild(ov);
 }
@@ -512,7 +763,7 @@ function showAlloc(){
   refresh();
   $('go').onclick=function(){
     // 应用属性
-    state.hp=100; state.food=3; state.materials=1; state.day=1; state.helped=0; state.hardened=0; state.intel=false;
+    state.hp=100; state.food=3; state.materials=1; state.day=1; state.helped=0; state.hardened=0; state.intel=false; state.faction=null; state.ending=null;
     state.stats={};
     STATS.forEach(st=>{ state.stats[st.key]=BASE+(profile.bonus[st.key]||0)+(alloc[st.key]||0); });
     this.closest('.overlay').remove();
@@ -522,8 +773,8 @@ function showAlloc(){
   };
 }
 
-function restart(){ document.querySelectorAll('.overlay').forEach(o=>o.remove()); state.hp=100;state.food=3;state.materials=1;state.day=1;state.helped=0;state.hardened=0;state.intel=false; nightNote=''; renderScene('d1'); }
-function backToProf(){ document.querySelectorAll('.overlay').forEach(o=>o.remove()); showProfession(); }
+function restart(){ document.querySelectorAll('.overlay').forEach(o=>o.remove()); state.hp=100;state.food=3;state.materials=1;state.day=1;state.helped=0;state.hardened=0;state.intel=false;state.faction=null;state.ending=null; nightNote=''; renderScene('d1'); }
+function backToProf(){ document.querySelectorAll('.overlay').forEach(o=>o.remove()); state.faction=null; state.ending=null; showProfession(); }
 
 showTitle();
 </script>
