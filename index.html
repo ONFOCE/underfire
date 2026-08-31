@@ -608,6 +608,18 @@ const RANDOM_EVENTS = [
       { label:"跟他走", check:{stat:'recon', diff:3}, ok:{ text:"你们趁夜溜了出去。天亮前，他又折返了——他说，他不放心家人，更不敢当逃兵。", effect:{hardened:1} }, no:{ text:"你们刚摸出营地就被发现，抓回去关了禁闭。", effect:{hp:-20} } },
       { label:"劝他别犯傻", check:{stat:'negotiation', diff:2}, ok:{ text:"你劝住了他。这当口当逃兵，是要挨枪子的。", effect:{} }, no:{ text:"他听不进去，第二天再没人见过他。", effect:{} } },
     ] },
+  { id:'r_army_patrol', faction:'army', text:"轮到你深夜站岗。营地外一片死寂，只有风刮过铁丝网的尖响。突然，前方草丛里一个黑影踉踉跄跄地朝你摸了过来。",
+    choices:[
+      { label:"喝问口令，端枪戒备", check:{stat:'recon', diff:3}, ok:{ text:"你一声喝问，对方被钉在原地——是个饿昏了的逃兵。你按规矩上报，得了一小块压缩饼干。", effect:{food:1} }, no:{ text:"你喝问得太晚，对方已经扑到跟前。慌乱中你们扭打起来，你挨了几下。", effect:{hp:-15} } },
+      { label:"直接开枪", check:{stat:'accuracy', diff:3}, ok:{ text:"一枪示警，那黑影应声而逃。后来查出是个偷粮的贼，你立了功，被赏了一碗热汤。", effect:{food:1, hardened:1} }, no:{ text:"你枪法失准，子弹擦着那人飞过，事情闹得人尽皆知。排长罚你多站了两班岗。", effect:{hp:-10} } },
+      { label:"悄悄退开，别惹麻烦", risk:60, ok:{ text:"你退回阴影里，那黑影转了几圈，自己离开了。", effect:{} }, no:{ text:"那黑影趁你不备溜了进来，抢走了哨位旁的一点干粮。事后你被当成失职，挨了训。", effect:{food:-1} } },
+    ] },
+  { id:'r_army_ration', faction:'army', text:"发粮时，你撞见伙夫把好粮藏起来，掺了砂子的陈粮发给大家，好东西拿去换烟酒。",
+    choices:[
+      { label:"当众揭发他", check:{stat:'negotiation', diff:3}, ok:{ text:"你振臂一呼，大伙儿群起响应。伙夫被拉去罚站，这一顿，大家终于吃上了正经粮食。", effect:{food:1, helped:1} }, no:{ text:"伙夫反咬一口，说你造谣生事。老兵们也不信你，你被孤立，还挨了顿冷眼。", effect:{hp:-10, hardened:1} } },
+      { label:"私下敲他一笔封口费", check:{stat:'negotiation', diff:2}, ok:{ text:"你凑上去，暗示自己全看见了。伙夫脸色发白，塞给你半袋好粮，求你别说出去。", effect:{food:2, materials:1, hardened:1} }, no:{ text:"伙夫不吃这套，扬言要弄你。之后几天，你的饭菜里总少一口。", effect:{food:-1} } },
+      { label:"多一事不如少一事", ok:{ text:"你低头扒饭，只当没看见。这年月，谁的手上都不干净。", effect:{hardened:1} } },
+    ] },
   { id:'r_org_ration', faction:'org', text:"互助会里吵翻了天：有人提议粮食集中起来统一分配，有人坚持各管各的。",
     choices:[
       { label:"支持统一分配", check:{stat:'negotiation', diff:3}, ok:{ text:"你据理力争，最终说服了大家。粮食集中起来，谁也不会饿死。", effect:{helped:1} }, no:{ text:"你吵不过那帮人，方案没通过。", effect:{} } },
