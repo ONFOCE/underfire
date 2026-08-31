@@ -33,6 +33,8 @@
   #stats { margin-top:8px; display:flex; flex-wrap:wrap; gap:6px; }
   #stats span { font-size:11px; color:var(--muted); background:rgba(255,255,255,.04); padding:2px 8px; border-radius:12px; }
   #stats b { color:var(--text); font-weight:600; }
+  #items { margin-top:6px; font-size:11px; color:var(--muted); }
+  #items b { color:var(--accent); font-weight:600; }
 
   #screen { padding:16px 18px; overflow-y:auto; flex:1; min-height:0; }
   #stage { font-size:15px; line-height:1.7; letter-spacing:.01em; white-space:pre-wrap; text-shadow:0 1px 2px rgba(0,0,0,.5); }
@@ -116,6 +118,7 @@
       <button id="sndBtn" title="切换声音 (M)" data-page-node-id="UZgun48rXR7g7nGjGGS3Lw">静音</button>
     </div>
     <div id="stats" data-page-node-id="IVPv3vg2JerUaNE3IOxeKe"></div>
+    <div id="items"></div>
   </div>
   <div id="screen" data-page-node-id="4DlCAwyHfzRgPE1olc9Bqf">
     <div id="stage" data-page-node-id="CQu1cpQRvRMSYJvzsCibvF"></div>
@@ -266,6 +269,10 @@ const PROFESSIONS = [
 const FACTION_LABEL = { army:'军队', org:'互助会', alone:'独行' };
 const FACTION_BONUS = { army:{accuracy:1, recon:1}, org:{negotiation:1, medicine:1}, alone:{gathering:1, search:1} };
 
+// —— 关键物品（装备） ——
+const ITEM = { crowbar:'撬棍', medkit:'医疗包', vest:'防弹衣', gun:'手枪', coat:'大衣', radio:'收音机' };
+const ITEM_CAP = 3;
+
 const BASE = 2, POOL = 8, CAP = 6;
 
 const scenes = {
@@ -275,7 +282,7 @@ const scenes = {
     choices:[
       { label:"去坍塌的超市废墟里搜",
         check:{stat:'search', diff:3},
-        ok:{ text:"你从瓦砾下扒出几罐没被打烂的罐头，还有两袋米。够撑几天了。", effect:{food:3}, next:"d2" },
+        ok:{ text:"你从瓦砾下扒出几罐没被打烂的罐头，还有两袋米。够撑几天了。", effect:{food:3, item:'crowbar'}, next:"d2" },
         no:{ text:"横梁突然塌了下来，碎石砸在你背上。你拼死拽出一袋米，几乎爬着回了家。", effect:{hp:-20, food:1}, next:"d2" } },
       { label:"去城外被炸过的农田里刨",
         check:{stat:'gathering', diff:2},
@@ -366,7 +373,7 @@ const scenes = {
         no:{ text:"地窖年久失修，一块天花板震落下来，砸得你眼冒金星。", effect:{hp:-15}, next:"d7" } },
       { label:"趁炮火间隙，出去捡空投的物资",
         check:{stat:'stamina', diff:3},
-        ok:{ text:"你像只兔子一样在炮火里穿梭，抢回了两个物资箱。", effect:{materials:3, food:2}, next:"d7" },
+        ok:{ text:"你像只兔子一样在炮火里穿梭，抢回了两个物资箱。", effect:{materials:3, food:2, item:'vest'}, next:"d7" },
         no:{ text:"一颗炮弹在近处炸开，气浪把你掀翻在地。你拖着身子爬了回去。", effect:{hp:-30}, next:"d7" } },
       { label:"躲在家里，哪儿也不去",
         risk:60,
@@ -383,7 +390,7 @@ const scenes = {
         ok:{ text:"你犹豫了一下，把仅有的吃食塞到她手里。她哭了，不停地道谢，抱着孩子消失进晨雾。你饿得胃里发慌，可心里，忽然不那么空了。", effect:{food:-2, helped:1}, next:"d8" } },
       { label:"帮她看看孩子的病",
         check:{stat:'medicine', diff:4},
-        ok:{ text:"你看出孩子是发烧脱了水。你用土办法帮他降温，又喂了温水。孩子终于退了烧。她临走前压低声音告诉你：城西有红十字的撤离点，停火后就走。", effect:{helped:1, intel:true}, next:"d8" },
+        ok:{ text:"你看出孩子是发烧脱了水。你用土办法帮他降温，又喂了温水。孩子终于退了烧。她临走前压低声音告诉你：城西有红十字的撤离点，停火后就走。", effect:{helped:1, intel:true, item:'medkit'}, next:"d8" },
         no:{ text:"你尽了力，可孩子太虚弱了。她抱着孩子离开，你一整夜都睡不安稳。", effect:{hp:-10}, next:"d8" } },
       { label:"关门，这年月谁管得了谁",
         ok:{ text:"你摇了摇头，关上了门。门外传来压抑的抽泣，然后是渐渐远去的脚步声。", effect:{hardened:1}, next:"d8" } },
@@ -399,7 +406,7 @@ const scenes = {
     text:"第八天，城里的秩序悄悄变了。\n\n街口的墙上贴出了告示：军队招人，管吃管住，还发饷。围了一堆人，有的跃跃欲试，有的扭头就走。\n\n同一晚，几个老邻居也来找你，说他们正拉一个互助会：一起搜物资、一起守夜、一起熬过去。\n\n也有人在劝你：这年月，命捏在别人手里不踏实。一个人，反倒轻省。",
     choices:[
       { label:"参军，去街口的征兵处签下名字",
-        ok:{ text:"你去了征兵处，在花名册上签下了自己的名字。从今晚起，你有了队伍，也有了一口热饭。", effect:{food:2}, faction:'army', next:"d9" } },
+        ok:{ text:"你去了征兵处，在花名册上签下了自己的名字。从今晚起，你有了队伍，也有了一口热饭。", effect:{food:2, item:'gun'}, faction:'army', next:"d9" } },
       { label:"加入邻居们的互助会",
         ok:{ text:"你把手搭在邻居们的手上。从今晚起，这条街的人，彼此照应。", effect:{}, faction:'org', next:"d9" } },
       { label:"谁都不信，一个人走下去",
@@ -413,7 +420,7 @@ const scenes = {
     choices:[
       { label:"去拆附近空屋的门板窗框，当柴烧",
         check:{stat:'gathering', diff:2},
-        ok:{ text:"你拆回一堆木头，火苗总算旺了起来。", effect:{materials:1}, next:"d10" },
+        ok:{ text:"你拆回一堆木头，火苗总算旺了起来。", effect:{materials:1, item:'coat'}, next:"d10" },
         no:{ text:"一堵墙突然塌下来，把你埋了半截，你挣扎着爬出来，浑身是伤。", effect:{hp:-15}, next:"d10" } },
       { label:"用粮食去换些干柴",
         check:{stat:'negotiation', diff:3},
@@ -434,7 +441,7 @@ const scenes = {
         no:{ text:"地里早被翻了个底朝天。你白跑一趟，还差点被一伙人抢了。", effect:{hp:-15}, next:"d11" } },
       { label:"拿家当去黑市碰碰运气",
         check:{stat:'negotiation', diff:3},
-        ok:{ text:"你讨价还价，用最少的家当换回了几顿口粮。", effect:{materials:-1, food:2}, next:"d11" },
+        ok:{ text:"你讨价还价，用最少的家当换回了几顿口粮。", effect:{materials:-1, food:2, item:'radio'}, next:"d11" },
         no:{ text:"黑市上一片混乱，你被人群挤倒，兜里的东西还被顺走了。", effect:{materials:-1}, next:"d11" } },
       { label:"勒紧裤腰带，硬扛过去",
         ok:{ text:"你把裤带又勒紧了一格。饥饿像一把钝刀，在胃里慢慢地磨。", effect:{}, next:"d11" } },
@@ -566,8 +573,8 @@ const scenes = {
 const RANDOM_EVENTS = [
   { id:'r_snow', text:"夜里，一场暴风雪突然袭来。窗户被风吹得砰砰响，寒气从每一条缝隙往里钻。",
     choices:[
-      { label:"多烧些柴，守着火别睡死", check:{stat:'gathering', diff:2}, ok:{ text:"你守着火，熬过了这一夜。", effect:{} }, no:{ text:"柴火不够，你冻得直哆嗦，天亮时头疼欲裂。", effect:{hp:-10} } },
-      { label:"裹紧毯子硬扛", risk:50, ok:{ text:"你裹紧毯子，挺了过去。", effect:{} }, no:{ text:"这一夜把你冻坏了，浑身发冷。", effect:{hp:-15} } },
+      { label:"多烧些柴，守着火别睡死", check:{stat:'gathering', diff:2}, ok:{ text:"你守着火，熬过了这一夜。", effect:{} }, no:{ text:"柴火不够，你冻得直哆嗦，天亮时头疼欲裂。", effect:{hp:-10, cold:true} } },
+      { label:"裹紧毯子硬扛", risk:50, ok:{ text:"你裹紧毯子，挺了过去。", effect:{} }, no:{ text:"这一夜把你冻坏了，浑身发冷。", effect:{hp:-15, cold:true} } },
     ] },
   { id:'r_wound', text:"天快亮时，你在巷口发现一个倒在血泊里的陌生人。他还活着，嘴唇翕动着，像在求救。",
     choices:[
@@ -575,7 +582,7 @@ const RANDOM_EVENTS = [
       { label:"搜他身上有没有值钱的东西", check:{stat:'search', diff:2}, ok:{ text:"你从他身上翻出些有用的东西，头也不回地走了。", effect:{materials:1, hardened:1} }, no:{ text:"你什么也没找到，反而沾了一手的血。", effect:{} } },
       { label:"当没看见，绕开走", ok:{ text:"你低下头，快步走了过去。", effect:{hardened:1} } },
     ] },
-  { id:'r_drop', text:"远处传来飞机的轰鸣，紧接着几个降落伞晃晃悠悠地飘下来，落在废墟之间。是空投！",
+  { id:'r_drop', notFaction:'army', text:"远处传来飞机的轰鸣，紧接着几个降落伞晃晃悠悠地飘下来，落在废墟之间。是空投！",
     choices:[
       { label:"趁早冲过去抢", check:{stat:'stamina', diff:3}, ok:{ text:"你第一个冲到，抢回了满满一箱。", effect:{materials:2, food:1} }, no:{ text:"你被人群挤倒，空手而归。", effect:{hp:-20} } },
       { label:"等人都抢完再去捡漏", check:{stat:'search', diff:2}, ok:{ text:"你在边角里翻出些被踩烂但还能用的东西。", effect:{materials:1} }, no:{ text:"等你过去，连渣都没剩下。", effect:{} } },
@@ -586,7 +593,7 @@ const RANDOM_EVENTS = [
       { label:"抄家伙，跟他们干", check:{stat:'accuracy', diff:3}, ok:{ text:"你气势汹汹地扑上去，把他们吓跑了。", effect:{materials:1} }, no:{ text:"你被他们围住，挨了一顿打。", effect:{hp:-25} } },
       { label:"悄悄退走，别惹事", check:{stat:'recon', diff:2}, ok:{ text:"你屏住呼吸，退进阴影里，没被发现。", effect:{} }, no:{ text:"你踩断了一根木棍，被他们追着跑了几条街。", effect:{hp:-15} } },
     ] },
-  { id:'r_checkpoint', text:"路口突然多了道盘查。几个士兵端着枪，挨个查路人的证件和背包。",
+  { id:'r_checkpoint', notFaction:'army', text:"路口突然多了道盘查。几个士兵端着枪，挨个查路人的证件和背包。",
     choices:[
       { label:"老实配合，编个说法", check:{stat:'negotiation', diff:3}, ok:{ text:"你编了个滴水不漏的来历，士兵挥手放你过去。", effect:{} }, no:{ text:"你的谎话被识破，背包被翻了个底朝天。", effect:{materials:-1} } },
       { label:"绕小路过去", check:{stat:'recon', diff:2}, ok:{ text:"你贴着墙根，从一条小巷绕了过去。", effect:{} }, no:{ text:"你绕路时被碎石绊倒，摔得不轻。", effect:{hp:-10} } },
@@ -615,12 +622,27 @@ const EPILOGUES = {
   alone:"战争结束后，你依旧是一个人。你搬进了一间能看见日出的屋子，慢慢习惯了不用数着炮声入睡的日子。\n\n偶尔有邻居敲你的门。你犹豫很久，才把门打开一条缝。\n\n你在学着，重新相信别人。",
 };
 
-const state = { hp:100, food:3, materials:1, day:1, helped:0, hardened:0, intel:false, faction:null, ending:null, stats:{} };
+const state = { hp:100, food:3, materials:1, day:1, helped:0, hardened:0, intel:false, faction:null, ending:null, stats:{}, items:[] };
 let current=null, typeTimer=null, typing=false, nightNote='';
 
 const stageEl=document.getElementById('stage'), choicesEl=document.getElementById('choices'), hudEl=document.getElementById('hud');
 
 function $(id){ return document.getElementById(id); }
+
+// —— 关键物品系统 ——
+function hasItem(id){ return state.items.includes(id); }
+function addItem(id){
+  if(!id || state.items.includes(id)) return false;
+  if(state.items.length >= ITEM_CAP) return false;
+  state.items.push(id); return true;
+}
+function useItem(id){ const i=state.items.indexOf(id); if(i<0) return false; state.items.splice(i,1); return true; }
+function itemBonus(stat){
+  let b=0;
+  if(hasItem('crowbar') && stat==='search') b+=2;
+  if(hasItem('gun') && stat==='accuracy') b+=2;
+  return b;
+}
 
 // —— 音频引擎初始化 & 静音切换 ——
 (function(){
@@ -652,10 +674,12 @@ function renderHud(){
   if(fac){ fw.style.display=''; $('fac').textContent=FACTION_LABEL[fac]; } else { fw.style.display='none'; }
   const s=$('stats'); s.innerHTML='';
   STATS.forEach(st=>{ const el=document.createElement('span'); el.innerHTML=st.label+' <b>'+state.stats[st.key]+'</b>'; s.appendChild(el); });
+  const it=$('items');
+  it.textContent = '背包：' + (state.items.length ? state.items.map(i=>ITEM[i]).join(' · ') : '空');
   updateAudio();
 }
 
-function chanceOf(stat,diff){ const v=state.stats[stat]; return Math.max(5, Math.min(95, 50+(v-diff)*15)); }
+function chanceOf(stat,diff){ const v=state.stats[stat]+itemBonus(stat); return Math.max(5, Math.min(95, 50+(v-diff)*15)); }
 function chanceClass(p){ return p>=70?'good':(p>=40?'warn':'bad'); }
 function meets(req){ if(!req) return true; return Object.entries(req).every(([k,v])=>(state[k]||0)>=v); }
 
@@ -668,7 +692,7 @@ function buildChoices(node, id){
     btn.addEventListener('mouseenter', ()=>Audio.hover());
     const okToUse = meets(c.requires);
     const meta = c.check
-      ? (function(){ const p=chanceOf(c.check.stat, c.check.diff); const st=STATS.find(s=>s.key===c.check.stat); return '<span class="meta '+chanceClass(p)+'">'+st.label+' '+state.stats[c.check.stat]+' · 成功率 '+p+'%</span>'; })()
+      ? (function(){ const p=chanceOf(c.check.stat, c.check.diff); const st=STATS.find(s=>s.key===c.check.stat); return '<span class="meta '+chanceClass(p)+'">'+st.label+' '+(state.stats[c.check.stat]+itemBonus(c.check.stat))+' · 成功率 '+p+'%</span>'; })()
       : (c.risk!==undefined ? '<span class="meta '+chanceClass(c.risk)+'">成功率 '+c.risk+'%</span>' : '');
     let needTxt = '';
     if(c.requires){ const k=Object.keys(c.requires)[0]; const nm={food:'食物',materials:'物资'}[k]||k; needTxt='<span class="meta muted">（需要 '+nm+' ≥ '+c.requires[k]+'）</span>'; }
@@ -713,8 +737,18 @@ function resolveChoice(c){
     res = c.ok; text = res.text;
   }
   if(roll===null){ Audio.confirm(); } else if(roll){ Audio.success(); } else { Audio.fail(); }
-  if(res.effect) for(const [k,v] of Object.entries(res.effect)) state[k]+=v;
+  if(res.effect){
+    const cold = res.effect.cold && hasItem('coat');
+    for(const [k,v] of Object.entries(res.effect)){
+      if(k==='item'){ if(addItem(v)) text += '\n\n（获得物品：'+ITEM[v]+'）'; else text += '\n\n（背包已满，你没能带走'+ITEM[v]+'。）'; continue; }
+      if(k==='cold'){ continue; }
+      if(k==='hp' && v<0 && cold){ continue; }
+      state[k]+=v;
+    }
+  }
   if(res.faction){ state.faction=res.faction; const fb=FACTION_BONUS[res.faction]; if(fb) for(const [k,v] of Object.entries(fb)) state.stats[k]=(state.stats[k]||0)+v; }
+  // 防弹衣：本次受伤减半（一次性，先于钳制处理以正确减伤）
+  if(state.hp < hpBefore && useItem('vest')) state.hp = hpBefore - Math.round((hpBefore - state.hp)/2);
   if(state.hp<0) state.hp=0;
   if(state.hp>100) state.hp=100;
   if(state.materials<0) state.materials=0;
@@ -722,8 +756,11 @@ function resolveChoice(c){
   if(state.hp < hpBefore){ Audio.hurt(); }
   renderHud();
 
-  // 死亡判定
-  if(state.hp<=0){ state.ending='e_death'; showResult(text, ()=>{ renderEnding(scenes.e_death); }); return; }
+  // 死亡判定（医疗包可救回一次）
+  if(state.hp<=0){
+    if(useItem('medkit')){ state.hp=30; text += '\n\n（医疗包救了你一命，生命恢复至 30。）'; renderHud(); }
+    else { state.ending='e_death'; showResult(text, ()=>{ renderEnding(scenes.e_death); }); return; }
+  }
 
   const next = res.next || 'd15';
   showResult(text, ()=>advance(next));
@@ -732,11 +769,13 @@ function resolveChoice(c){
 function advance(next){
   if(next==='d14') next='d14_'+(state.faction||'alone');
   const node=scenes[next];
-  // 夜晚消耗（跨天时）
+  // 夜晚消耗（跨天时；军队管吃管住，不消耗口粮）
   if(node.day && node.day>1){
     Audio.dayKnell();
-    if(state.food>0){ state.food--; nightNote='（这一夜，你吃掉了一份口粮。）\n\n'; }
-    else { state.hp-=20; if(state.hp<0)state.hp=0; Audio.hurt(); nightNote='（这一夜，你饿着肚子。胃里像有火在烧，生命 -20。）\n\n'; if(state.hp<=0){ state.ending='e_death'; renderEnding(scenes.e_death); return; } }
+    if(state.faction!=='army'){
+      if(state.food>0){ state.food--; nightNote='（这一夜，你吃掉了一份口粮。）\n\n'; }
+      else { state.hp-=20; if(state.hp<0)state.hp=0; Audio.hurt(); nightNote='（这一夜，你饿着肚子。胃里像有火在烧，生命 -20。）\n\n'; if(state.hp<=0){ if(useItem('medkit')){ state.hp=30; nightNote+='（医疗包救了你一命，生命恢复至 30。）\n\n'; } else { state.ending='e_death'; renderEnding(scenes.e_death); return; } } }
+    }
   }
   // 随机事件
   if(node.day && node.day>=2 && node.day<=14 && Math.random()<0.35){
@@ -758,7 +797,7 @@ function showResult(text, onContinue){
 function resolveEnding(){
   let id;
   if(state.hp<=0) id='e_death';
-  else if(state.intel) id='e_evac';
+  else if(state.intel || hasItem('radio')) id='e_evac';
   else if(state.faction==='army') id='e_army';
   else if(state.faction==='org') id='e_org';
   else id='e_alone';
@@ -783,7 +822,10 @@ function renderEnding(node){
 }
 
 function pickEvent(){
-  const pool = RANDOM_EVENTS.filter(e=>!e.faction || e.faction===state.faction);
+  const pool = RANDOM_EVENTS.filter(e=>{
+    if(e.notFaction && state.faction===e.notFaction) return false;
+    return !e.faction || e.faction===state.faction;
+  });
   return pool[Math.floor(Math.random()*pool.length)];
 }
 function renderEvent(ev, back){
@@ -920,7 +962,7 @@ function showAlloc(){
   refresh();
   $('go').onclick=function(){
     // 应用属性
-    state.hp=100; state.food=3; state.materials=1; state.day=1; state.helped=0; state.hardened=0; state.intel=false; state.faction=null; state.ending=null;
+    state.hp=100; state.food=3; state.materials=1; state.day=1; state.helped=0; state.hardened=0; state.intel=false; state.faction=null; state.ending=null; state.items=[];
     state.stats={};
     STATS.forEach(st=>{ state.stats[st.key]=BASE+(profile.bonus[st.key]||0)+(alloc[st.key]||0); });
     this.closest('.overlay').remove();
@@ -930,7 +972,7 @@ function showAlloc(){
   };
 }
 
-function restart(){ document.querySelectorAll('.overlay').forEach(o=>o.remove()); state.hp=100;state.food=3;state.materials=1;state.day=1;state.helped=0;state.hardened=0;state.intel=false;state.faction=null;state.ending=null; nightNote=''; renderScene('d1'); }
+function restart(){ document.querySelectorAll('.overlay').forEach(o=>o.remove()); state.hp=100;state.food=3;state.materials=1;state.day=1;state.helped=0;state.hardened=0;state.intel=false;state.faction=null;state.ending=null; state.items=[]; nightNote=''; renderScene('d1'); }
 function backToProf(){ document.querySelectorAll('.overlay').forEach(o=>o.remove()); state.faction=null; state.ending=null; showProfession(); }
 
 showTitle();
