@@ -41,6 +41,8 @@
   #stage::after { content:"▌"; color:var(--accent); animation:blink 1s step-end infinite; }
   #stage.done::after { content:""; }
   @keyframes blink { 50% { opacity:0; } }
+  #sceneImg { display:none; width:100%; aspect-ratio:16/9; object-fit:cover; border-radius:10px; border:1px solid rgba(255,255,255,.08); margin-bottom:14px; background:rgba(255,255,255,.03); }
+  .overlay .endImg { width:100%; max-width:420px; aspect-ratio:16/9; object-fit:cover; border-radius:10px; border:1px solid rgba(255,255,255,.08); margin-bottom:16px; background:rgba(255,255,255,.03); }
 
   #choices { margin-top:14px; display:flex; flex-direction:column; gap:8px; }
   #choices button {
@@ -121,6 +123,7 @@
     <div id="items"></div>
   </div>
   <div id="screen">
+    <img id="sceneImg" alt="">
     <div id="stage"></div>
     <div id="choices"></div>
   </div>
@@ -697,6 +700,14 @@ function meets(req){ if(!req) return true; return Object.entries(req).every(([k,
 
 function clearChoices(){ choicesEl.innerHTML=''; }
 
+function showImage(key){
+  const el=$('sceneImg');
+  if(!key){ el.style.display='none'; return; }
+  el.style.display='block';
+  el.onerror=()=>{ el.style.display='none'; };
+  el.src='img/'+key+'.png';
+}
+
 function buildChoices(node, id){
   clearChoices();
   node.choices.forEach(c=>{
@@ -725,6 +736,8 @@ function renderScene(id){
   if(warSting[id]) setTimeout(()=>Audio[warSting[id]](), 500);
 
   if(node.ending){ renderEnding(node); return; }
+
+  showImage(id);
 
   let text = (id==='d1' ? '' : nightNote) + node.text;
   nightNote='';
@@ -823,7 +836,8 @@ function renderEnding(node){
   clearChoices();
   stageEl.textContent=''; stageEl.classList.add('done');
   const ov=document.createElement('div'); ov.className='overlay';
-  ov.innerHTML = '<div class="ending-tag">—— '+node.ending+' ——</div>'+
+  ov.innerHTML = '<img class="endImg" src="img/'+state.ending+'.png" onerror="this.style.display=\'none\'">'+
+    '<div class="ending-tag">—— '+node.ending+' ——</div>'+
     '<h1 style="font-size:26px;margin-bottom:20px">'+node.ending+'</h1>'+
     '<p class="ending-text">'+node.text.replace(/\n/g,'<br>')+'</p>'+
     '<div style="font-size:13px;color:var(--muted);margin-bottom:18px">你以「'+profile.name+'」的身份，撑过了 '+state.day+' 天</div>'+
@@ -848,6 +862,7 @@ function renderEvent(ev, back){
       return cc;
     }) };
   stageEl.classList.remove('done');
+  showImage(ev.id);
   const text = nightNote + ev.text; nightNote='';
   typeText(text, ()=> buildChoices(node, 'r'));
 }
@@ -901,6 +916,7 @@ function showStory(){
   playBeat();
   function playBeat(){
     stageEl.classList.remove('done');
+    showImage('p'+storyIdx);
     typeText(PROLOGUE[storyIdx], ()=>{
       const btn=document.createElement('button'); btn.className='primary';
       btn.textContent = (storyIdx < PROLOGUE.length-1) ? '继续' : '继续 → 选择你的过去';
@@ -917,7 +933,8 @@ function showTitle(){
   hudEl.style.display='none';
   stageEl.textContent=''; clearChoices();
   const ov=document.createElement('div'); ov.className='overlay';
-  ov.innerHTML='<h1>炮火之下</h1>'+
+  ov.innerHTML='<img class="endImg" src="img/title.png" onerror="this.style.display=\'none\'">'+
+    '<h1>炮火之下</h1>'+
     '<p class="sub">战火中的城市。没有英雄，只有想活下去的普通人。<br>选择你的过去，分配你的能力，撑过这十五天。</p>'+
     '<button class="btn" onclick="Audio.unlock();Audio.startAmbient();Audio.title();this.parentNode.remove();showStory()">开始</button>';
   document.getElementById('app').appendChild(ov);
