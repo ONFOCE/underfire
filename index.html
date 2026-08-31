@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<html lang="zh-CN" data-page-node-id="YGV6DbQCcOq6iILZf6MsOo">
+<head data-page-node-id="qwB08rdyPvNtOfP5KHAIHo">
+<meta charset="UTF-8" data-page-node-id="VcmvZVXWLZTDyNTAXCAvKE">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" data-page-node-id="cDyDBgS4uao4C8zNiuHLFs">
 <title>炮火之下 · 战火求生</title>
 <style>
   :root {
@@ -99,24 +99,149 @@
   }
   .stat-row .ctrl button:disabled { opacity:.3; cursor:not-allowed; }
   .pool { color:var(--accent); font-size:14px; margin-bottom:14px; font-weight:600; }
+
+  #sndBtn { margin-left:auto; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
+    color:var(--text); border-radius:8px; padding:3px 10px; cursor:pointer; font-size:12px; line-height:1.6; }
+  #sndBtn:hover { background:rgba(208,138,75,.16); border-color:rgba(208,138,75,.4); }
 </style>
 </head>
-<body>
-<div id="app">
-  <div id="hud">
-    <div class="row1">
-      <span>第<b id="day">1</b>天</span><span class="sep">·</span>
-      <span>生命 <b class="hp" id="hp">100</b></span><span class="sep">·</span>
-      <span>食物 <b id="food">3</b></span><span class="sep">·</span>
-      <span>物资 <b id="mat">1</b></span><span id="facWrap" style="display:none"><span class="sep">·</span><span id="fac" style="color:var(--accent);font-weight:600"></span></span>
+<body data-page-node-id="50UhAg408cE6lkybuwBVEw">
+<div id="app" data-page-node-id="Z2OvfTrjAAFX6cvz8x3IaM">
+  <div id="hud" data-page-node-id="JCmdvHqY2U6FatKA07M1iM">
+    <div class="row1" data-page-node-id="OHQFNDp6gc7FkYkRE47BOO">
+      <span data-page-node-id="PVnLVrLzGl3hrgt8YLOENC">第<b id="day" data-page-node-id="kMSxi66UjDAOv3SYAiFWin">1</b>天</span><span class="sep" data-page-node-id="U1dMW4mj1CDo7riioqFdGB">·</span>
+      <span data-page-node-id="OOuJsRBVMKYvNKSNITKqlh">生命 <b class="hp" id="hp" data-page-node-id="5SYPZ8QKz1YgZStS9JHKEG">100</b></span><span class="sep" data-page-node-id="xBlg8X5aEu2T8oWlrPC50G">·</span>
+      <span data-page-node-id="BpJP8mpwBYvmPP0JMHAN66">食物 <b id="food" data-page-node-id="eIe0kTzzYHMFArDh252g7U">3</b></span><span class="sep" data-page-node-id="fomnBZ1qqJthSqNMj58Z7G">·</span>
+      <span data-page-node-id="JrBbhuSDSyYLc8kGWnB40V">物资 <b id="mat" data-page-node-id="inbPTsmr3ELdkKceZeQRYp">1</b></span><span id="facWrap" style="display:none" data-page-node-id="cYADaoUC96i0q73RN1zMae"><span class="sep" data-page-node-id="3HhwsoDUyE1Voq7BPO7kqY">·</span><span id="fac" style="color:var(--accent);font-weight:600" data-page-node-id="pEzqxvMTH73JUsD8AsHoGJ"></span></span>
+      <button id="sndBtn" title="切换声音 (M)" data-page-node-id="UZgun48rXR7g7nGjGGS3Lw">静音</button>
     </div>
-    <div id="stats"></div>
+    <div id="stats" data-page-node-id="IVPv3vg2JerUaNE3IOxeKe"></div>
   </div>
-  <div id="screen">
-    <div id="stage"></div>
-    <div id="choices"></div>
+  <div id="screen" data-page-node-id="4DlCAwyHfzRgPE1olc9Bqf">
+    <div id="stage" data-page-node-id="CQu1cpQRvRMSYJvzsCibvF"></div>
+    <div id="choices" data-page-node-id="AJfz7Zsz416IwPVcwAHqCC"></div>
   </div>
 </div>
+
+<script>
+// ============ 程序化音频引擎 (Web Audio API) ============
+const Audio = (function(){
+  let ctx=null, master=null, buses={}, muted=false;
+  let ambient=null, tension=0.0, heartTimer=null, heartOn=false;
+  let noiseBuf=null;
+
+  function ensure(){
+    if(ctx) return true;
+    try{ ctx = new (window.AudioContext||window.webkitAudioContext)(); }
+    catch(e){ return false; }
+    master = ctx.createGain(); master.gain.value = muted ? 0 : 1; master.connect(ctx.destination);
+    buses = { ambient: bus(0.85), sfx: bus(1.0), ui: bus(0.5) };
+    noiseBuf = makeNoise(2);
+    return true;
+  }
+  function bus(g){ const n=ctx.createGain(); n.gain.value=g; n.connect(master); return n; }
+  function makeNoise(sec){
+    const b=ctx.createBuffer(1, Math.floor(ctx.sampleRate*sec), ctx.sampleRate);
+    const d=b.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+    return b;
+  }
+  function osc(type, freq, dest, t0, dur, peak, freqEnd){
+    if(!ctx) return;
+    const o=ctx.createOscillator(); o.type=type; o.frequency.setValueAtTime(freq,t0);
+    if(freqEnd) o.frequency.exponentialRampToValueAtTime(freqEnd, t0+dur);
+    const g=ctx.createGain(); g.gain.setValueAtTime(0.0001,t0);
+    g.gain.linearRampToValueAtTime(peak,t0+0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+    o.connect(g); g.connect(dest); o.start(t0); o.stop(t0+dur+0.02);
+  }
+  function noiseHit(dest, t0, dur, peak, filterType, f0, f1, q){
+    if(!ctx) return;
+    const src=ctx.createBufferSource(); src.buffer=noiseBuf; src.loop=true;
+    const f=ctx.createBiquadFilter(); f.type=filterType||'lowpass'; f.frequency.setValueAtTime(f0||400,t0);
+    if(f1) f.frequency.exponentialRampToValueAtTime(f1, t0+dur);
+    f.Q.value=q||0.8;
+    const g=ctx.createGain(); g.gain.setValueAtTime(0.0001,t0);
+    g.gain.linearRampToValueAtTime(peak,t0+0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+    src.connect(f); f.connect(g); g.connect(dest); src.start(t0); src.stop(t0+dur+0.02);
+  }
+
+  // ---- 一次性音效（均以 !ctx 兜底，未解锁前静默）----
+  function tick(){ if(!ctx) return; const t=ctx.currentTime; noiseHit(buses.ui,t,0.03,0.05,'bandpass',2000,1400,3); osc('square',1600,buses.ui,t,0.018,0.02); }
+  function click(){ if(!ctx) return; const t=ctx.currentTime; osc('sine',900,buses.ui,t,0.04,0.14); osc('sine',1800,buses.ui,t,0.03,0.05); }
+  function hover(){ if(!ctx) return; const t=ctx.currentTime; osc('sine',480,buses.ui,t,0.04,0.06); }
+  function confirm(){ if(!ctx) return; const t=ctx.currentTime; osc('sine',523,buses.ui,t,0.12,0.10); osc('sine',784,buses.ui,t+0.06,0.14,0.10); }
+  function success(){ if(!ctx) return; const t=ctx.currentTime; osc('sine',392,buses.sfx,t,0.25,0.10); osc('sine',523,buses.sfx,t+0.08,0.30,0.09); osc('sine',659,buses.sfx,t+0.16,0.40,0.07); }
+  function fail(){ if(!ctx) return; const t=ctx.currentTime; osc('sine',150,buses.sfx,t,0.30,0.14,70); noiseHit(buses.sfx,t,0.20,0.10,'lowpass',400,120,0.8); }
+  function hurt(){ if(!ctx) return; const t=ctx.currentTime; osc('sine',110,buses.sfx,t,0.35,0.16,55); noiseHit(buses.sfx,t,0.18,0.08,'lowpass',300,90,1); }
+  function risk(){ if(!ctx) return; const t=ctx.currentTime; osc('sine',90,buses.sfx,t,0.30,0.12,60); }
+  function heartbeat(){ if(!ctx) return; const t=ctx.currentTime; osc('sine',55,buses.sfx,t,0.16,0.18,40); osc('sine',50,buses.sfx,t+0.2,0.20,0.14,38); }
+  function gunshot(){ if(!ctx) return; const t=ctx.currentTime; noiseHit(buses.sfx,t,0.25,0.5,'lowpass',6000,500,0.5); osc('sine',120,buses.sfx,t,0.20,0.30,40); }
+  function explosion(){ if(!ctx) return; const t=ctx.currentTime; noiseHit(buses.sfx,t,0.90,0.5,'lowpass',4000,60,0.4); osc('sine',70,buses.sfx,t,1.0,0.40,30); }
+  function dayKnell(){ if(!ctx) return; const t=ctx.currentTime; osc('sine',196,buses.sfx,t,1.6,0.08); osc('sine',98,buses.sfx,t,1.8,0.10); }
+  function title(){ if(!ctx) return; const t=ctx.currentTime; osc('sine',55,buses.ambient,t,3.0,0.25); osc('sine',82.5,buses.ambient,t,3.0,0.12); }
+  function endingSad(){ if(!ctx) return; const t=ctx.currentTime; [196,147,98].forEach((f,i)=>osc('sine',f,buses.sfx,t+i*0.4,2.5,0.06)); }
+  function endingHope(){ if(!ctx) return; const t=ctx.currentTime; [262,330,392].forEach((f,i)=>osc('sine',f,buses.sfx,t+i*0.35,2.2,0.06)); }
+
+  // ---- 环境底噪（循环，紧张度驱动）----
+  function startAmbient(){
+    if(!ensure()||ambient) return;
+    const t=ctx.currentTime;
+    const out=ctx.createGain(); out.gain.value=0.0; out.connect(buses.ambient);
+    const d1=ctx.createOscillator(); d1.type='sine'; d1.frequency.value=55;
+    const d2=ctx.createOscillator(); d2.type='sine'; d2.frequency.value=55.7;
+    const dflt=ctx.createBiquadFilter(); dflt.type='lowpass'; dflt.frequency.value=220;
+    const dg=ctx.createGain(); dg.gain.value=0.35;
+    d1.connect(dflt); d2.connect(dflt); dflt.connect(dg); dg.connect(out);
+    const m=ctx.createOscillator(); m.type='triangle'; m.frequency.value=110;
+    const mg=ctx.createGain(); mg.gain.value=0.05; m.connect(mg); mg.connect(out);
+    const wind=ctx.createBufferSource(); wind.buffer=noiseBuf; wind.loop=true;
+    const wf=ctx.createBiquadFilter(); wf.type='bandpass'; wf.frequency.value=500; wf.Q.value=1.2;
+    const wg=ctx.createGain(); wg.gain.value=0.06;
+    const lfo=ctx.createOscillator(); lfo.type='sine'; lfo.frequency.value=0.08;
+    const lfoG=ctx.createGain(); lfoG.gain.value=220;
+    lfo.connect(lfoG); lfoG.connect(wf.frequency);
+    wind.connect(wf); wf.connect(wg); wg.connect(out);
+    const rum=ctx.createBufferSource(); rum.buffer=noiseBuf; rum.loop=true;
+    const rf=ctx.createBiquadFilter(); rf.type='lowpass'; rf.frequency.value=90;
+    const rg=ctx.createGain(); rg.gain.value=0.05;
+    rum.connect(rf); rf.connect(rg); rg.connect(out);
+    [d1,d2,m,wind,rum,lfo].forEach(n=>n.start());
+    out.gain.linearRampToValueAtTime(1.0, t+4.0);
+    ambient={out,dflt,dg,wf,wg,rg,mg};
+    applyTension();
+  }
+  function applyTension(){
+    if(!ambient) return;
+    const T=tension;
+    ambient.dg.gain.value = 0.30 + T*0.25;
+    ambient.wg.gain.value = 0.05 + T*0.08;
+    ambient.rg.gain.value = 0.04 + T*0.12;
+    ambient.dflt.frequency.value = 180 + T*320;
+    ambient.wf.frequency.value = 420 + T*500;
+  }
+  function setTension(v){ tension=Math.max(0,Math.min(1,v)); applyTension(); }
+
+  function setHeartbeat(on){
+    if(!ctx) return;
+    if(on && !heartOn){ heartOn=true; heartTimer=setInterval(()=>{ if(heartOn) heartbeat(); }, 640); }
+    if(!on && heartOn){ heartOn=false; clearInterval(heartTimer); }
+  }
+
+  function setMuted(m){ muted=m; if(master && ctx) master.gain.setTargetAtTime(m?0:1, ctx.currentTime, 0.05); }
+  function toggleMuted(){ setMuted(!muted); return muted; }
+  function isMuted(){ return muted; }
+  function unlock(){ if(!ensure()) return; if(ctx.state==='suspended') ctx.resume(); }
+
+  return {
+    unlock, ensure, startAmbient, setTension, setHeartbeat,
+    tick, click, hover, confirm, success, fail, hurt, risk,
+    heartbeat, gunshot, explosion, dayKnell, title, endingSad, endingHope,
+    setMuted, toggleMuted, isMuted
+  };
+})();
+</script>
 
 <script>
 const STATS = [
@@ -497,6 +622,27 @@ const stageEl=document.getElementById('stage'), choicesEl=document.getElementByI
 
 function $(id){ return document.getElementById(id); }
 
+// —— 音频引擎初始化 & 静音切换 ——
+(function(){
+  const b=$('sndBtn');
+  function sync(){ if(b) b.textContent = Audio.isMuted() ? '声音' : '静音'; }
+  if(b) b.onclick = ()=>{ Audio.unlock(); Audio.toggleMuted(); sync(); };
+  window.addEventListener('keydown', e=>{ if(e.key==='m'||e.key==='M'){ Audio.unlock(); Audio.toggleMuted(); sync(); } });
+  // 全局按键音：任何可用按钮被点击时播放"咔哒"声
+  document.addEventListener('click', e=>{
+    const btn = e.target.closest('button');
+    if(btn && !btn.disabled) Audio.click();
+  });
+})();
+
+function updateAudio(){
+  const dayT = Math.min(1, (state.day||1)/15);
+  const lowHp = state.hp<=30 ? 1 : (state.hp<=50 ? 0.5 : 0);
+  const T = Math.min(1, dayT*0.55 + lowHp*0.45 + (state.faction==='army'?0.15:0));
+  Audio.setTension(T);
+  Audio.setHeartbeat(state.hp>0 && state.hp<=30);
+}
+
 function renderHud(){
   $('day').textContent=state.day;
   $('hp').textContent=state.hp;
@@ -506,6 +652,7 @@ function renderHud(){
   if(fac){ fw.style.display=''; $('fac').textContent=FACTION_LABEL[fac]; } else { fw.style.display='none'; }
   const s=$('stats'); s.innerHTML='';
   STATS.forEach(st=>{ const el=document.createElement('span'); el.innerHTML=st.label+' <b>'+state.stats[st.key]+'</b>'; s.appendChild(el); });
+  updateAudio();
 }
 
 function chanceOf(stat,diff){ const v=state.stats[stat]; return Math.max(5, Math.min(95, 50+(v-diff)*15)); }
@@ -518,6 +665,7 @@ function buildChoices(node, id){
   clearChoices();
   node.choices.forEach(c=>{
     const btn=document.createElement('button');
+    btn.addEventListener('mouseenter', ()=>Audio.hover());
     const okToUse = meets(c.requires);
     const meta = c.check
       ? (function(){ const p=chanceOf(c.check.stat, c.check.diff); const st=STATS.find(s=>s.key===c.check.stat); return '<span class="meta '+chanceClass(p)+'">'+st.label+' '+state.stats[c.check.stat]+' · 成功率 '+p+'%</span>'; })()
@@ -537,6 +685,8 @@ function renderScene(id){
   current=id; const node=scenes[id];
   if(node.day) state.day=node.day;
   renderHud(); clearChoices();
+  const warSting={d1:'gunshot',d3:'gunshot',d6:'explosion',d11:'explosion'};
+  if(warSting[id]) setTimeout(()=>Audio[warSting[id]](), 500);
 
   if(node.ending){ renderEnding(node); return; }
 
@@ -548,25 +698,28 @@ function renderScene(id){
 }
 
 function resolveChoice(c){
-  let res, text;
+  let res, text, roll=null;
+  const hpBefore=state.hp;
   if(c.check){
     const p=chanceOf(c.check.stat, c.check.diff);
-    const roll=Math.random()*100 < p;
+    roll=Math.random()*100 < p;
     res = roll ? c.ok : c.no;
     text = (roll?'「成功」 ':'「失败」 ') + res.text;
   } else if(c.risk!==undefined){
-    const roll=Math.random()*100 < c.risk;
+    roll=Math.random()*100 < c.risk;
     res = roll ? c.ok : c.no;
     text = (roll?'「顺利」 ':'「不测」 ') + res.text;
   } else {
     res = c.ok; text = res.text;
   }
+  if(roll===null){ Audio.confirm(); } else if(roll){ Audio.success(); } else { Audio.fail(); }
   if(res.effect) for(const [k,v] of Object.entries(res.effect)) state[k]+=v;
   if(res.faction){ state.faction=res.faction; const fb=FACTION_BONUS[res.faction]; if(fb) for(const [k,v] of Object.entries(fb)) state.stats[k]=(state.stats[k]||0)+v; }
   if(state.hp<0) state.hp=0;
   if(state.hp>100) state.hp=100;
   if(state.materials<0) state.materials=0;
   if(state.food<0) state.food=0;
+  if(state.hp < hpBefore){ Audio.hurt(); }
   renderHud();
 
   // 死亡判定
@@ -581,8 +734,9 @@ function advance(next){
   const node=scenes[next];
   // 夜晚消耗（跨天时）
   if(node.day && node.day>1){
+    Audio.dayKnell();
     if(state.food>0){ state.food--; nightNote='（这一夜，你吃掉了一份口粮。）\n\n'; }
-    else { state.hp-=20; if(state.hp<0)state.hp=0; nightNote='（这一夜，你饿着肚子。胃里像有火在烧，生命 -20。）\n\n'; if(state.hp<=0){ state.ending='e_death'; renderEnding(scenes.e_death); return; } }
+    else { state.hp-=20; if(state.hp<0)state.hp=0; Audio.hurt(); nightNote='（这一夜，你饿着肚子。胃里像有火在烧，生命 -20。）\n\n'; if(state.hp<=0){ state.ending='e_death'; renderEnding(scenes.e_death); return; } }
   }
   // 随机事件
   if(node.day && node.day>=2 && node.day<=14 && Math.random()<0.35){
@@ -613,6 +767,8 @@ function resolveEnding(){
 }
 
 function renderEnding(node){
+  Audio.setHeartbeat(false);
+  if(node.ending==='长夜') Audio.endingSad(); else Audio.endingHope();
   clearChoices();
   stageEl.textContent=''; stageEl.classList.add('done');
   const ov=document.createElement('div'); ov.className='overlay';
@@ -660,6 +816,7 @@ function typeText(text, done){
   stageEl.textContent=''; stageEl.classList.remove('done');
   let i=0;
   typeTimer=setInterval(()=>{ i++; stageEl.textContent=text.slice(0,i);
+    if(i%2===0) Audio.tick();
     if(i>=text.length) finishType();
   },20);
 }
@@ -708,7 +865,7 @@ function showTitle(){
   const ov=document.createElement('div'); ov.className='overlay';
   ov.innerHTML='<h1>炮火之下</h1>'+
     '<p class="sub">战火中的城市。没有英雄，只有想活下去的普通人。<br>选择你的过去，分配你的能力，撑过这十五天。</p>'+
-    '<button class="btn" onclick="this.parentNode.remove();showStory()">开始</button>';
+    '<button class="btn" onclick="Audio.unlock();Audio.startAmbient();Audio.title();this.parentNode.remove();showStory()">开始</button>';
   document.getElementById('app').appendChild(ov);
 }
 
