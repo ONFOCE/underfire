@@ -17,13 +17,13 @@
                 radial-gradient(90% 80% at 50% 110%, #14100c 0%, transparent 60%), var(--bg);
     font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
     color:var(--text); display:flex; align-items:center; justify-content:center;
-    height:100vh; overflow:hidden; -webkit-tap-highlight-color:transparent;
+    height:100vh; height:100dvh; overflow:hidden; -webkit-tap-highlight-color:transparent;
   }
   #app {
     width:100%; max-width:640px; background:var(--panel);
     border:1px solid rgba(208,138,75,.16); border-radius:16px;
     box-shadow:0 20px 60px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.03);
-    overflow:hidden; position:relative; height:100vh; display:flex; flex-direction:column;
+    overflow:hidden; position:relative; height:100vh; height:100dvh; display:flex; flex-direction:column;
   }
 
   #hud { display:none; padding:9px 16px; border-bottom:1px solid var(--line); font-size:12px; }
@@ -36,7 +36,7 @@
   #items { margin-top:6px; font-size:11px; color:var(--muted); }
   #items b { color:var(--accent); font-weight:600; }
 
-  #screen { padding:16px 18px; overflow-y:auto; flex:1; min-height:0; }
+  #screen { padding:16px 18px; overflow-y:auto; -webkit-overflow-scrolling:touch; flex:1; min-height:0; }
   #stage { font-size:15px; line-height:1.7; letter-spacing:.01em; white-space:pre-wrap; text-shadow:0 1px 2px rgba(0,0,0,.5); }
   #stage::after { content:"▌"; color:var(--accent); animation:blink 1s step-end infinite; }
   #stage.done::after { content:""; }
@@ -63,7 +63,7 @@
   .overlay {
     position:absolute; inset:0; display:flex; flex-direction:column;
     align-items:center; text-align:center; padding:20px 18px 24px;
-    background:rgba(10,10,12,.97); z-index:5; overflow-y:auto;
+    background:rgba(10,10,12,.97); z-index:5; overflow-y:auto; -webkit-overflow-scrolling:touch;
   }
   .overlay::before, .overlay::after { content:""; margin:auto; }
   .overlay h1 { font-size:32px; letter-spacing:.16em; color:var(--text); margin-bottom:10px; text-shadow:0 0 30px rgba(208,138,75,.4); }
