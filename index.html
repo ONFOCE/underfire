@@ -705,7 +705,7 @@ function showImage(key){
   if(!key){ el.style.display='none'; return; }
   el.style.display='block';
   el.onerror=()=>{ el.style.display='none'; };
-  el.src='img/'+key+'.png';
+  el.src='img/'+key+'.webp';
 }
 
 function buildChoices(node, id){
@@ -836,7 +836,7 @@ function renderEnding(node){
   clearChoices();
   stageEl.textContent=''; stageEl.classList.add('done');
   const ov=document.createElement('div'); ov.className='overlay';
-  ov.innerHTML = '<img class="endImg" src="img/'+state.ending+'.png" onerror="this.style.display=\'none\'">'+
+  ov.innerHTML = '<img class="endImg" src="img/'+state.ending+'.webp" onerror="this.style.display=\'none\'">'+
     '<div class="ending-tag">—— '+node.ending+' ——</div>'+
     '<h1 style="font-size:26px;margin-bottom:20px">'+node.ending+'</h1>'+
     '<p class="ending-text">'+node.text.replace(/\n/g,'<br>')+'</p>'+
@@ -933,7 +933,7 @@ function showTitle(){
   hudEl.style.display='none';
   stageEl.textContent=''; clearChoices();
   const ov=document.createElement('div'); ov.className='overlay';
-  ov.innerHTML='<img class="endImg" src="img/title.png" onerror="this.style.display=\'none\'">'+
+  ov.innerHTML='<img class="endImg" src="img/title.webp" onerror="this.style.display=\'none\'">'+
     '<h1>炮火之下</h1>'+
     '<p class="sub">战火中的城市。没有英雄，只有想活下去的普通人。<br>选择你的过去，分配你的能力，撑过这十五天。</p>'+
     '<button class="btn" onclick="Audio.unlock();Audio.startAmbient();Audio.title();this.parentNode.remove();showStory()">开始</button>';
